@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="320" viewBox="0 0 1200 320" role="img" aria-labelledby="title desc">
+  <title id="title">AUREON</title>
+  <desc id="desc">Inference for Earth foundation models. A dark navy banner with an orange orbital grid and a geometric A mark.</desc>
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#101e2b"/><stop offset="1" stop-color="#07121c"/></linearGradient>
+    <linearGradient id="accent" x2="1" y2="1"><stop stop-color="#ffbf7b"/><stop offset="1" stop-color="#f97316"/></linearGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="#d5e8f2" stroke-opacity=".06"/></pattern>
+    <clipPath id="globe"><circle cx="985" cy="155" r="155"/></clipPath>
+  </defs>
+  <rect width="1200" height="320" rx="20" fill="url(#bg)"/>
+  <rect width="1200" height="320" rx="20" fill="url(#grid)"/>
+  <g fill="none" stroke="#f8a363" stroke-width="1" opacity=".6">
+    <circle cx="985" cy="155" r="155"/>
+    <ellipse cx="985" cy="155" rx="100" ry="155"/>
+    <ellipse cx="985" cy="155" rx="40" ry="155"/>
+    <ellipse cx="985" cy="155" rx="155" ry="54"/>
+    <ellipse cx="985" cy="155" rx="155" ry="112"/>
+    <path d="M830 155H1140M985 0V310"/>
+  </g>
+  <g clip-path="url(#globe)" fill="#f9a262" opacity=".18">
+    <path d="M871 60h40v36h38v36h-38v38h-40zM950 172h38v38h38v38h-38v38h-38zM1026 58h40v38h40v38h-40v38h-40z"/>
+  </g>
+  <ellipse cx="985" cy="155" rx="201" ry="70" transform="rotate(-32 985 155)" fill="none" stroke="#fca467" stroke-width="2"/>
+  <circle cx="1143" cy="57" r="6" fill="#ffb878"/>
+  <path d="M54 116 84 55 114 116H97L84 88 70 116Z" fill="url(#accent)"/>
+  <path d="M78 111h12l6 12H72Z" fill="#ffbf7b"/>
+  <text x="136" y="106" font-family="Arial, Helvetica, sans-serif" font-size="57" font-weight="700" letter-spacing="7" fill="#f4f7fa">AUREON</text>
+  <rect x="56" y="153" width="40" height="3" rx="1.5" fill="#fb923c"/>
+  <text x="56" y="202" font-family="Arial, Helvetica, sans-serif" font-size="29" fill="#e5edf3">Inference for Earth foundation models.</text>
+  <text x="56" y="246" font-family="Arial, Helvetica, sans-serif" font-size="16" letter-spacing="2" fill="#9fb4c4">PYTHON  /  CLI  /  LOCAL API</text>
+  <text x="56" y="294" font-family="Arial, Helvetica, sans-serif" font-size="12" letter-spacing="1.5" fill="#7691a5">AUREON FOUNDATION BY NORVIQUE</text>
+</svg>

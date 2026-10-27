@@ -2,6 +2,7 @@
 import argparse
 import ast
 import hashlib
+from html.parser import HTMLParser
 import json
 from pathlib import Path
 import re
@@ -13,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PUBLIC_FILES = {
     'README.md', 'LICENSE', 'NOTICE', 'SECURITY.md', 'CONTRIBUTING.md', '.gitignore', '.gitattributes',
     'docs/README.md', 'docs/MODEL-SUPPORT.md', 'docs/RIGHTS.md', 'docs/releases/v0.1.0.md',
+    'docs/ARCHITECTURE.md', 'docs/assets/aureon-banner.svg',
     'release/v0.1.0.json', 'tools/check_public_source.py',
     '.github/ISSUE_TEMPLATE/bug_report.md', '.github/ISSUE_TEMPLATE/feature_request.md',
     '.github/ISSUE_TEMPLATE/config.yml', '.github/pull_request_template.md',
@@ -21,6 +23,19 @@ PUBLIC_FILES = {
 
 def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+class DocumentLinks(HTMLParser):
+    """Collect links and images from the HTML supported inside GitHub Markdown."""
+
+    def __init__(self):
+        super().__init__()
+        self.targets = []
+
+    def handle_starttag(self, tag, attrs):
+        for key, value in attrs:
+            if value and ((tag == 'a' and key == 'href') or (tag == 'img' and key == 'src')):
+                self.targets.append(value)
 
 
 def main():
@@ -57,7 +72,9 @@ def main():
         if path.suffix == '.md' or path.name == 'NOTICE':
             doc_count += 1
             assert not re.search(r'(?:C:[/\\]Users[/\\]|/mnt/[a-z]/Users/|/root/|codex://|plugin://|(?:\.\./)*runs/)', text), name
-            for href in re.findall(r'\]\(([^)]+)\)', text):
+            html = DocumentLinks()
+            html.feed(text)
+            for href in re.findall(r'\]\(([^)]+)\)', text) + html.targets:
                 href = href.strip('<>')
                 if re.match(r'^[a-zA-Z][a-zA-Z0-9+.-]*:', href):
                     assert href.startswith(('https://', 'http://', 'mailto:')), (name, href)

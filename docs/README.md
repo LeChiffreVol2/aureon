@@ -1,22 +1,42 @@
-# Documentation
+# AUREON documentation
 
-Start with [installation and first result](../packaging/START-HERE.md), then choose
-the interface and model you need. The release kit is linked from the
-[repository README](../README.md#install).
+**Prepare imagery. Run a model. Keep the result and its provenance together.**
 
-| Topic | Guide |
+[Repository](../README.md) · [Download v0.1.0](https://github.com/LeChiffreVol2/aureon/releases/tag/v0.1.0) · [Get help](../packaging/SUPPORT.md)
+
+## New to AUREON?
+
+1. **Choose a workflow.** Review the [supported models](MODEL-SUPPORT.md): KAO-TerraMind B segmentation or TerraMind S2L2A → synthetic S1GRD generation.
+2. **Install and prepare.** Follow [installation and first result](../packaging/START-HERE.md) for your dependency profile, pinned assets and Sentinel-2 input.
+3. **Run and inspect.** Execute your first explicit job, then inspect the COG, mask and provenance together.
+
+Linux x86_64 / WSL2 and Python 3.12 are the documented platform. Keep scene and
+generation in separate environments. Installation and metadata inspection do
+not load weights or run inference.
+
+## Find your guide
+
+| I want to… | Read this |
 | --- | --- |
-| Exact dependency installation | [Locked profiles](../packaging/LOCKED-INSTALL.md) |
-| User-owned Sentinel-2 inputs | [Bands, radiometry, grids and masks](../packaging/INPUTS.md) |
-| External checkpoints/tokenizer | [Official pinned assets](../packaging/ASSETS.md) |
-| Offline Python / resident sessions | [Public API v1](../packaging/PUBLIC-API.md) |
-| Authenticated local HTTP | [Serving guide](../packaging/ASYNC-SERVICE.md) |
-| Models and actual qualification | [Support matrix](MODEL-SUPPORT.md) |
-| Troubleshooting | [Errors and support](../packaging/SUPPORT.md) |
-| Public alpha contents and checksums | [v0.1.0 release notes](releases/v0.1.0.md) |
-| Attribution and approved scope | [Rights statement](RIGHTS.md) |
-| Private vulnerability reports | [Security policy](../SECURITY.md) |
+| Understand the Engine and its interfaces | [Architecture and result lifecycle](ARCHITECTURE.md) |
+| Install reproducibly or use a local dependency cache | [Locked dependency profiles](../packaging/LOCKED-INSTALL.md) |
+| Prepare my own Sentinel-2 imagery | [Bands, radiometry, grids and masks](../packaging/INPUTS.md) |
+| Find the exact checkpoint and tokenizer | [Pinned model assets](../packaging/ASSETS.md) |
+| Call inference from Python | [Public API and resident sessions](../packaging/PUBLIC-API.md) |
+| Use the command line | [First-result commands](../packaging/START-HERE.md) |
+| Upload, submit and download through local HTTP | [Authenticated local service](../packaging/ASYNC-SERVICE.md) |
+| Check whether a model or profile is qualified | [Support matrix](MODEL-SUPPORT.md) |
+| Diagnose a failed install or job | [Errors and support](../packaging/SUPPORT.md) |
 
-These guides describe local library/service use. They do not enable a hosted
-service, acquire model assets, rent GPUs, start scheduled jobs or enable payments.
-Execution commands require explicit user action; metadata and help are CPU-only.
+## Release and project reference
+
+| Reference | What it contains |
+| --- | --- |
+| [v0.1.0 release notes](releases/v0.1.0.md) | Exact artifact checksums, interfaces and validation scope |
+| [Contributing](../CONTRIBUTING.md) | Repository map, local checks and pull-request guidance |
+| [Rights statement](RIGHTS.md) | Approved constants/class-name scope and archive wording |
+| [Third-party notices](../packaging/review/THIRD-PARTY-NOTICES.md) | Source attribution, licenses and upstream discrepancy |
+| [Security policy](../SECURITY.md) | Supported boundary and private vulnerability reporting |
+
+These guides cover the local library and local service. The public alpha does not
+include a hosted inference endpoint or a production SLA.
