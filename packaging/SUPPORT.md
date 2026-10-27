@@ -6,7 +6,7 @@ in [SECURITY.md](SECURITY.md). No response-time or remediation SLA is promised.
 
 | Symptom | Action |
 | --- | --- |
-| `python3.12`, `venv`, `curl` or `unzip` missing | Run the guide in Linux/WSL Bash and provision the missing host prerequisite before starting installation |
+| `python3.12`, `venv` or `curl` missing | Run the guide in Linux/WSL Bash and provision the missing host prerequisite before starting installation |
 | Lock file, `ARTIFACTS.json` or examples missing | Extract the installation kit from the release assets, not GitHub Source code (zip); set `AUREON_KIT` to its extracted directory |
 | `aureon-engine: command not found` | Activate the intended venv in this terminal; use its `bin/python -m pip show aureon-inference` to confirm installation |
 | Have SAFE/JP2, RGB or no imagery | Export the required GeoTIFF inputs and metadata first, or try the [CPU walkthrough](../docs/CPU-WALKTHROUGH.md); it is not a model prediction |

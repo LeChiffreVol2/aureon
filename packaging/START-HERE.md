@@ -8,7 +8,7 @@ For segmentation, use the separate [KAO-TerraMind B route](#first-kao-terramind-
 
 | You need | Why |
 | --- | --- |
-| Linux x86_64 or WSL2, Bash, CPython 3.12 with `venv`/pip, `curl` and `unzip` | These are the platform and shell used by the commands below. Run them inside Linux/WSL, not PowerShell. |
+| Linux x86_64 or WSL2, Bash, CPython 3.12 with `venv`/pip and `curl` | These are the platform and shell used by the commands below. Run them inside Linux/WSL, not PowerShell. |
 | A compatible NVIDIA GPU and driver for model execution | The recorded configuration is RTX 3070 8 GiB / WSL. Other devices are not covered by that acceptance. Generation uses the CUDA 12.8 dependency profile. |
 | Disk space for an environment, two weights files and your data/results | TerraMind weights total 2,665,307,952 bytes (about 2.67 GB); CUDA dependencies add several GiB. |
 | Your own supported Sentinel-2 GeoTIFF input | The kit supplies editable JSON templates, not satellite imagery. See the exact input requirements in step 3. |
@@ -39,7 +39,7 @@ curl -fL https://github.com/LeChiffreVol2/aureon/releases/download/v0.1.0/aureon
   -o aureon-0.1.0-public-alpha.zip
 printf '%s  %s\n' '3e844b14ba7a4a8138a3386ab2dd928e426ffcbf018f3183acf91a854297db07' \
   'aureon-0.1.0-public-alpha.zip' | sha256sum --check
-unzip aureon-0.1.0-public-alpha.zip
+python3.12 -m zipfile -e aureon-0.1.0-public-alpha.zip .
 cd aureon-0.1.0-public-alpha
 sha256sum --check SHA256SUMS
 export AUREON_KIT="$(pwd)"

@@ -76,7 +76,7 @@ curl -fL https://github.com/LeChiffreVol2/aureon/releases/download/v0.1.0/aureon
   -o aureon-0.1.0-public-alpha.zip
 printf '%s  %s\n' '3e844b14ba7a4a8138a3386ab2dd928e426ffcbf018f3183acf91a854297db07' \
   'aureon-0.1.0-public-alpha.zip' | sha256sum --check
-unzip aureon-0.1.0-public-alpha.zip
+python3.12 -m zipfile -e aureon-0.1.0-public-alpha.zip .
 cd aureon-0.1.0-public-alpha
 sha256sum --check SHA256SUMS
 ```
