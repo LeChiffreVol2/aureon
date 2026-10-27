@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="docs/assets/aureon-banner.svg" alt="AUREON — Inference for Earth foundation models" width="960">
+  <img src="docs/assets/aureon-banner.svg" alt="AUREON — Generative Foundation Models for Earth Observation" width="960">
 </p>
 
 <p align="center">
-  <strong>From satellite inputs to georeferenced results.</strong><br>
-  One Engine. Python, CLI, and a local API.
+  <strong>Generative Foundation Models for Earth Observation.</strong><br>
+  Specialized inference. Python, CLI, and a local API.
 </p>
 
 <p align="center">
@@ -25,10 +25,14 @@
 
 ---
 
-AUREON is an open-source inference library for **Earth foundation models**.
-Prepare your Sentinel-2 imagery, run a supported model, and receive
-Cloud Optimized GeoTIFFs (COGs) with their validity masks and provenance.
-Use the same Engine from a Python script, the command line, or an authenticated local service.
+AUREON is an open-source inference engine built for **Generative Foundation Models
+for Earth Observation**, with support for the broader Earth foundation model family.
+Start with **TerraMind**: turn a prepared Sentinel-2 L2A crop into synthetic S1GRD
+VV/VH imagery, delivered as a georeferenced Cloud Optimized GeoTIFF (COG) with
+provenance. **KAO-TerraMind** adds dense-prediction workflows through the same Engine.
+
+Use Python, CLI or an authenticated local API. The published v0.1.0 library runs
+on your own machine; the landing page describes the wider platform direction.
 
 ## Why AUREON?
 
@@ -43,8 +47,8 @@ Use the same Engine from a Python script, the command line, or an authenticated 
 
 | Model | Task | Input → output | Start here |
 | --- | --- | --- | --- |
-| **KAO-TerraMind B** | Segmentation | Twelve-band Sentinel-2 L2A → class-map and validity-mask COGs | [First scene](packaging/START-HERE.md#first-kao-terramind-b-result) |
 | **TerraMind 1.0 base** | Cross-modal generation | All-valid 224 × 224 S2L2A → synthetic S1GRD VV/VH | [First generation](packaging/START-HERE.md#first-terramind-result) |
+| **KAO-TerraMind B** | Segmentation | Twelve-band Sentinel-2 L2A → class-map and validity-mask COGs | [First scene](packaging/START-HERE.md#first-kao-terramind-b-result) |
 
 KAO-TerraMind A/C also have implemented full-reference routes with earlier-artifact
 evidence. See the [support matrix](docs/MODEL-SUPPORT.md) for exact profiles,
@@ -52,7 +56,12 @@ hardware and qualification. Generated S1GRD is synthetic imagery, not an observe
 
 ## Install
 
-**Linux x86_64 or WSL2 · Python 3.12 · separate scene and generation environments**
+**Linux x86_64 or WSL2 · Python 3.12 · NVIDIA GPU for model execution**
+
+The quickstart defaults to TerraMind generation. You need your own supported
+Sentinel-2 GeoTIFF input and two pinned model files (about 2.67 GB combined);
+dependencies and outputs need additional disk space. No image or model is bundled.
+See [prerequisites](packaging/START-HERE.md#before-you-start).
 
 1. Download the [v0.1.0 installation kit](https://github.com/LeChiffreVol2/aureon/releases/download/v0.1.0/aureon-0.1.0-public-alpha.zip).
 2. Verify and extract it using the commands below.
@@ -82,35 +91,40 @@ After installation, inspect your environment without loading a model:
 
 ```sh
 aureon-engine models
-aureon-engine assets --model kao-terramind-b
-aureon-engine check --environment scene
-# For the separate TerraMind environment, use --environment generation.
+aureon-engine assets --model terramind-v1-base
+aureon-engine check --environment generation
 ```
 
 ## A first look at the API
 
-With your [input prepared](packaging/INPUTS.md) and [KAO-TerraMind B bundle](packaging/START-HERE.md#supply-assets) ready:
+After [creating your TerraMind config](packaging/START-HERE.md#first-terramind-result),
+run the same first-generation workflow from Python. Choose **either** this example
+or the CLI job in the guide; both execute a model job.
 
 ```python
-from aureon.api import SceneRequest, run_model
+from pathlib import Path
+from aureon.api import GenerationRequest, run_model
 
-request = SceneRequest(
-    prepared_input="/absolute/work/prepared-scene/manifest.json",
-    bundle="/absolute/assets/kao-terramind-b",
-    output="/absolute/work/first-result",  # Choose a fresh output directory.
-    model_id="kao-terramind-b",
-    profile_id="fp32-full-reference-v1",
-    environment="scene",
+work = Path.home() / "aureon-work"
+request = GenerationRequest(
+    config=str(Path.home() / "aureon-config/generation.json"),
+    output=str(work / "generation-python-first"),  # Must not exist yet.
+    job_id="first",
+    attempt_id="one",
+    reuse="auto",
+    denoiser="graph",
 )
 result = run_model(request, execute_model=True)
 
-print(result.class_map)
-print(result.valid_mask)
-print(result.provenance)
+print(result["job"]["cog"]["file"]["path"])
+print(result["job"]["provenance"]["path"])
+print(result["cleanup"]["passed"])
 ```
 
-Replace the paths with your own inputs and assets. `execute_model=True` explicitly
-starts inference; installation, import and metadata inspection do not execute a model.
+`execute_model=True` explicitly starts inference. For a **CPU-only installation
+walkthrough without imagery or weights**, use the optional
+[preparation demo](docs/CPU-WALKTHROUGH.md). It checks the input pipeline with
+artificial pixels; it does not generate a model prediction.
 
 **Go further:** [Generation and resident sessions](packaging/PUBLIC-API.md) ·
 [CLI quickstart](packaging/START-HERE.md) · [Local HTTP API](packaging/ASYNC-SERVICE.md)
@@ -122,7 +136,7 @@ flowchart LR
     A[Your Sentinel-2 imagery] --> B[Prepare bands, grid and masks]
     B --> C[AUREON Engine]
     D[Pinned model assets] --> C
-    C --> E[Georeferenced COGs]
+    C --> E[Synthetic S1GRD or class-map COGs]
     C --> F[Masks and provenance]
 ```
 

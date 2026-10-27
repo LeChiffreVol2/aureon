@@ -6,9 +6,14 @@ in [SECURITY.md](SECURITY.md). No response-time or remediation SLA is promised.
 
 | Symptom | Action |
 | --- | --- |
+| `python3.12`, `venv`, `curl` or `unzip` missing | Run the guide in Linux/WSL Bash and provision the missing host prerequisite before starting installation |
+| Lock file, `ARTIFACTS.json` or examples missing | Extract the installation kit from the release assets, not GitHub Source code (zip); set `AUREON_KIT` to its extracted directory |
+| `aureon-engine: command not found` | Activate the intended venv in this terminal; use its `bin/python -m pip show aureon-inference` to confirm installation |
+| Have SAFE/JP2, RGB or no imagery | Export the required GeoTIFF inputs and metadata first, or try the [CPU walkthrough](../docs/CPU-WALKTHROUGH.md); it is not a model prediction |
 | Missing dependency / ProfileError | Run `pip check` and `aureon-engine check --environment ...` in the selected Python3.12 Linux venv; reinstall the matching hash lock in a fresh environment |
 | Wrong wheel or file hash | Compare with the release manifest; do not replace a checksum with the observed wrong value |
 | Checkpoint mismatch | Use the exact revision and filename from `aureon-engine assets`; renamed or fine-tuned weights are a different identity |
+| Empty result JSON after CLI execution | Check the command exit code and stderr; shell redirection can create an empty file even when a job fails |
 | Existing output path | Choose a new config, bundle, work or download path; preserve existing results |
 | Wrong bands/units/grid | Correct the declared source mapping/radiometry and matching mask; do not force the manifest or label DN as reflectance |
 | Invalid TerraMind crop | Select an all-valid224 window; cloud/nodata filling and arbitrary shapes are unsupported |

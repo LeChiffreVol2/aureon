@@ -6,6 +6,14 @@ and automatic radiometric guessing are not supported. Export your own data to
 GeoTIFF first, preserving its actual metadata; do not substitute private upstream
 example chips. The supplied JSON examples are editable specifications, not data.
 
+## Choose your input route
+
+The templates are in `examples/` inside the installation kit and
+[`examples/packaged_scene/`](../examples/packaged_scene) in this repository. Copy
+a template beside your data, edit its paths and actual product metadata, then
+run the [preparation commands](START-HERE.md#prepare-user-owned-sentinel-2-input).
+For a no-data installation check, use the [artificial CPU walkthrough](../docs/CPU-WALKTHROUGH.md).
+
 ## Aligned raster
 
 `aligned-input.json` expects a georeferenced FP32 raster with exactly twelve bands:

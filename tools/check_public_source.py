@@ -15,6 +15,7 @@ PUBLIC_FILES = {
     'README.md', 'LICENSE', 'NOTICE', 'SECURITY.md', 'CONTRIBUTING.md', '.gitignore', '.gitattributes',
     'docs/README.md', 'docs/MODEL-SUPPORT.md', 'docs/RIGHTS.md', 'docs/releases/v0.1.0.md',
     'docs/ARCHITECTURE.md', 'docs/assets/aureon-banner.svg',
+    'docs/CPU-WALKTHROUGH.md', 'examples/generation/cpu_walkthrough.py',
     'release/v0.1.0.json', 'tools/check_public_source.py',
     '.github/ISSUE_TEMPLATE/bug_report.md', '.github/ISSUE_TEMPLATE/feature_request.md',
     '.github/ISSUE_TEMPLATE/config.yml', '.github/pull_request_template.md',

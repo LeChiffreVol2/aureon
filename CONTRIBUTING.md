@@ -25,6 +25,7 @@ For suspected vulnerabilities, follow [SECURITY.md](SECURITY.md) and report priv
 | [`aureon/prepare/`](aureon/prepare) | Input-preparation command line |
 | [`aureon/scene_pipeline/`](aureon/scene_pipeline) | Scene execution and geospatial streaming |
 | [`aureon/serving/`](aureon/serving) | Local service and client |
+| [`examples/generation/`](examples/generation) | CPU-only generation-input walkthrough |
 | [`examples/packaged_scene/`](examples/packaged_scene) | Input specifications and runnable entry points |
 | [`packaging/tests/`](packaging/tests) | Package, API and installed-layout contracts |
 | [`packaging/`](packaging) | Dependency profiles, installation guides and build allowlists |

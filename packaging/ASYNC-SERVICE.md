@@ -5,11 +5,40 @@ Keep state, scratch and credentials on an owned native Linux filesystem (not a
 Windows mount/network share). Use separate state/work paths per service/model.
 Default loopback binding is intentional. No external deployment is implied.
 
-## KAO-TerraMind B
+## TerraMind generation
 
-Create a bundle and prepared scene as in the first-result guide. In terminal1:
+Use the generation environment, prepared224 manifest and generated config.
+In terminal 1, activate the generation environment:
 
 ```sh
+source "$HOME/aureon-generation-0.1.0/bin/activate"
+mkdir -p "$HOME/aureon-service" "$HOME/aureon-downloads"
+aureon-service init --state "$HOME/aureon-service/tm-state" \
+  --credentials "$HOME/aureon-service/tm-credentials.json" --tenant local \
+  --model terramind-v1-base --environment generation --profile fp32-generation-v1 --denoiser graph
+aureon-service serve --state "$HOME/aureon-service/tm-state" \
+  --work "$HOME/aureon-service/tm-worker" --config "$HOME/aureon-config/generation.json" \
+  --execute-model --port 8043 --max-jobs 1 --max-seconds 300 --drain-seconds 60
+```
+
+In terminal 2, activate that same environment:
+
+```sh
+source "$HOME/aureon-generation-0.1.0/bin/activate"
+aureon-service-client --url http://127.0.0.1:8043 \
+  --credentials "$HOME/aureon-service/tm-credentials.json" --tenant local run \
+  --manifest "$HOME/aureon-work/generation-input-first/manifest.json" \
+  --model terramind-v1-base --profile fp32-generation-v1 --task generation --seed 17 \
+  --idempotency-key tm-first --recovery-file "$HOME/aureon-downloads/tm-first-request.jsonl" \
+  --output "$HOME/aureon-downloads/tm-first"
+```
+
+## KAO-TerraMind B
+
+Create a bundle and prepared scene as in the first-result guide. In terminal 1:
+
+```sh
+source "$HOME/aureon-scene-0.1.0/bin/activate"
 mkdir -p "$HOME/aureon-service" "$HOME/aureon-downloads"
 aureon-service init --state "$HOME/aureon-service/b-state" \
   --credentials "$HOME/aureon-service/b-credentials.json" --tenant local \
@@ -19,9 +48,10 @@ aureon-service serve --state "$HOME/aureon-service/b-state" \
   --execute-model --port 8042 --max-jobs 1 --max-seconds 300 --drain-seconds 60
 ```
 
-In terminal2, activate the same environment:
+In terminal 2, activate the same environment:
 
 ```sh
+source "$HOME/aureon-scene-0.1.0/bin/activate"
 aureon-service-client --url http://127.0.0.1:8042 \
   --credentials "$HOME/aureon-service/b-credentials.json" --tenant local run \
   --manifest "$HOME/aureon-work/prepared-first/manifest.json" \
@@ -34,31 +64,7 @@ Guarded B operators may select `fp32-stream-guarded-v3` with `--qualification`
 during init, using a separately valid receipt. Use that same profile in the client.
 The full-reference route above needs no operator-created qualification.
 
-## TerraMind generation
-
-Use the generation environment, prepared224 manifest and generated config.
-In terminal1:
-
-```sh
-mkdir -p "$HOME/aureon-service" "$HOME/aureon-downloads"
-aureon-service init --state "$HOME/aureon-service/tm-state" \
-  --credentials "$HOME/aureon-service/tm-credentials.json" --tenant local \
-  --model terramind-v1-base --environment generation --profile fp32-generation-v1 --denoiser graph
-aureon-service serve --state "$HOME/aureon-service/tm-state" \
-  --work "$HOME/aureon-service/tm-worker" --config "$HOME/aureon-config/generation.json" \
-  --execute-model --port 8043 --max-jobs 1 --max-seconds 300 --drain-seconds 60
-```
-
-In terminal2:
-
-```sh
-aureon-service-client --url http://127.0.0.1:8043 \
-  --credentials "$HOME/aureon-service/tm-credentials.json" --tenant local run \
-  --manifest "$HOME/aureon-work/generation-input-first/manifest.json" \
-  --model terramind-v1-base --profile fp32-generation-v1 --task generation --seed 17 \
-  --idempotency-key tm-first --recovery-file "$HOME/aureon-downloads/tm-first-request.jsonl" \
-  --output "$HOME/aureon-downloads/tm-first"
-```
+## Results and retries
 
 The client uploads declared evidence, submits, polls status, downloads and verifies
 saved COG/provenance bytes. Numerical comparison is an Engine qualification, not

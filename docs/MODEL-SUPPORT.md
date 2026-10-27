@@ -2,8 +2,8 @@
 
 | Model | Environment | Implemented workflow | Recorded qualification |
 | --- | --- | --- | --- |
-| KAO-TerraMind B | `scene` | Prepared S2L2A segmentation; full-reference or separately qualified guarded resident serving | Final v0.1.0 wheel: guarded-v3 B512 HTTP job, retained FP32 reference, exact class/mask/grid/provenance, replay and clean shutdown |
 | TerraMind 1.0 base | `generation` | All-valid S2L2A224 → synthetic S1GRD; 8 token / 10 diffusion steps, highest FP32, eligible exact encoder reuse and decoder graph | Final v0.1.0 wheel: seed17 HTTP job, exact raw/token/RNG/COG parity, replay and clean shutdown |
+| KAO-TerraMind B | `scene` | Prepared S2L2A segmentation; full-reference or separately qualified guarded resident serving | Final v0.1.0 wheel: guarded-v3 B512 HTTP job, retained FP32 reference, exact class/mask/grid/provenance, replay and clean shutdown |
 | KAO-TerraMind A/C | `scene-legacy` | Full-reference segmentation interfaces | Earlier-artifact model evidence; no new A/C final-wheel qualification |
 
 The final wheel SHA256 is

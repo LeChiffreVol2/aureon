@@ -1,6 +1,6 @@
 # AUREON public alpha v0.1.0
 
-**AUREON Foundation by Norvique** — specialized inference for Earth foundation models.
+**AUREON Foundation by Norvique** — inference for Generative Foundation Models for Earth Observation.
 
 Start with [installation and first result](START-HERE.md). Download the verified
 kit from the [GitHub release](https://github.com/LeChiffreVol2/aureon/releases/tag/v0.1.0);

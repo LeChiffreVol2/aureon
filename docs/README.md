@@ -1,12 +1,12 @@
 # AUREON documentation
 
-**Prepare imagery. Run a model. Keep the result and its provenance together.**
+**Generative Foundation Models for Earth Observation — from Sentinel-2 input to synthetic S1GRD.**
 
 [Repository](../README.md) · [Download v0.1.0](https://github.com/LeChiffreVol2/aureon/releases/tag/v0.1.0) · [Get help](../packaging/SUPPORT.md)
 
 ## New to AUREON?
 
-1. **Choose a workflow.** Review the [supported models](MODEL-SUPPORT.md): KAO-TerraMind B segmentation or TerraMind S2L2A → synthetic S1GRD generation.
+1. **Choose a workflow.** Review the [supported models](MODEL-SUPPORT.md): start with TerraMind S2L2A → synthetic S1GRD generation, or choose KAO-TerraMind B segmentation.
 2. **Install and prepare.** Follow [installation and first result](../packaging/START-HERE.md) for your dependency profile, pinned assets and Sentinel-2 input.
 3. **Run and inspect.** Execute your first explicit job, then inspect the COG, mask and provenance together.
 
@@ -18,6 +18,7 @@ not load weights or run inference.
 
 | I want to… | Read this |
 | --- | --- |
+| Try the input pipeline without weights or imagery | [CPU-only preparation walkthrough](CPU-WALKTHROUGH.md) |
 | Understand the Engine and its interfaces | [Architecture and result lifecycle](ARCHITECTURE.md) |
 | Install reproducibly or use a local dependency cache | [Locked dependency profiles](../packaging/LOCKED-INSTALL.md) |
 | Prepare my own Sentinel-2 imagery | [Bands, radiometry, grids and masks](../packaging/INPUTS.md) |

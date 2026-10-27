@@ -2,7 +2,9 @@
 
 [Documentation](README.md) · [First result](../packaging/START-HERE.md) · [Python API](../packaging/PUBLIC-API.md)
 
-AUREON connects geospatial input preparation, explicit model execution and
+AUREON specializes in inference for Generative Foundation Models for Earth
+Observation while also supporting dense-prediction Earth models. It connects
+geospatial input preparation, explicit model execution and
 verified result delivery. Python, CLI and the local HTTP service use the same
 Engine. Model assets and user imagery are supplied separately from the package.
 
