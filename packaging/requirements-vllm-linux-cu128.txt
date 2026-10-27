@@ -1,0 +1,9 @@
+# Separate Linux/CPython 3.12 environment; never combine with scene/cu130.
+--extra-index-url https://download.pytorch.org/whl/cu128
+-c constraints-linux-py312-cu128.txt
+numpy==2.2.6
+torch==2.10.0+cu128
+torchvision==0.25.0+cu128
+terratorch==1.2.13
+rasterio==1.5.2
+vllm==0.19.0

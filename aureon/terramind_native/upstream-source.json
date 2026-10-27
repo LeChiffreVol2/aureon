@@ -1,0 +1,193 @@
+{
+  "schema": "aureon.terramind_upstream_source.v1",
+  "package": "terratorch",
+  "version": "1.2.13",
+  "files": [
+    {
+      "bytes": 202,
+      "path": "terratorch/models/backbones/terramind/__init__.py",
+      "sha256": "90a3e8fe14c5b07f31f3c8d5cf5df5286c2a732fa4ec92e9d7161225977b8a61"
+    },
+    {
+      "bytes": 0,
+      "path": "terratorch/models/backbones/terramind/model/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 11925,
+      "path": "terratorch/models/backbones/terramind/model/decoder_embeddings.py",
+      "sha256": "19d7a5e81dc8eaf9776d590cd92168ea744e409f2faad7ecfeec110c9f84d7f9"
+    },
+    {
+      "bytes": 20293,
+      "path": "terratorch/models/backbones/terramind/model/encoder_embeddings.py",
+      "sha256": "84f879fa15cc11ffbe0e38710ea17cb884014304a1402b9bfd1b6d6158bfdecc"
+    },
+    {
+      "bytes": 69862,
+      "path": "terratorch/models/backbones/terramind/model/generate.py",
+      "sha256": "f2eaa210c21963f9abeddbe4ef9bd18f6c08e6996e1adf634dffb69293877072"
+    },
+    {
+      "bytes": 17050,
+      "path": "terratorch/models/backbones/terramind/model/modality_info.py",
+      "sha256": "3585b5fcc2c2c04218e040bacf1b6201cf6a13bd9f4ffa2458ee1c0130d07f0e"
+    },
+    {
+      "bytes": 45472,
+      "path": "terratorch/models/backbones/terramind/model/terramind.py",
+      "sha256": "3767fd136fab44921d586327db20c583522dff1c00b297bb93677429d8431ad3"
+    },
+    {
+      "bytes": 16157,
+      "path": "terratorch/models/backbones/terramind/model/terramind_generation.py",
+      "sha256": "459b4ad82f2932b62c6fdebc150609a365f99f7b29dcb43419e16fb29d136108"
+    },
+    {
+      "bytes": 32746,
+      "path": "terratorch/models/backbones/terramind/model/terramind_register.py",
+      "sha256": "220580f5c4283eb8ccd3dedbca4fdd98462f7e63675ec7c15acc02a74a2ce127"
+    },
+    {
+      "bytes": 23700,
+      "path": "terratorch/models/backbones/terramind/model/terramind_tim.py",
+      "sha256": "9d16838de2c7c8661b0d0046e8d65ca32cf045627e1dd062274c094ea71bbdb5"
+    },
+    {
+      "bytes": 14407,
+      "path": "terratorch/models/backbones/terramind/model/terramind_vit.py",
+      "sha256": "6cb33ce0e55aaa5cf36d70b360c3384bbdc68067777dfcd8afb94389a1711d85"
+    },
+    {
+      "bytes": 19804,
+      "path": "terratorch/models/backbones/terramind/model/tm_utils.py",
+      "sha256": "440b6007a765752c52db988f0b14220daed6444caa6fed584f41b00a5dee81a4"
+    },
+    {
+      "bytes": 0,
+      "path": "terratorch/models/backbones/terramind/tokenizer/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "terratorch/models/backbones/terramind/tokenizer/models/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 5217,
+      "path": "terratorch/models/backbones/terramind/tokenizer/models/mlp_models.py",
+      "sha256": "044479b4994a70a99edea2bc4a7e1996cec2e05022256925a7e0815c0f095f78"
+    },
+    {
+      "bytes": 0,
+      "path": "terratorch/models/backbones/terramind/tokenizer/models/unet/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 8500,
+      "path": "terratorch/models/backbones/terramind/tokenizer/models/unet/fp16_util.py",
+      "sha256": "0a5f1cbeda1842ed9b32a7c0e7941092a70877a6fb20896e254dcbe4988e7241"
+    },
+    {
+      "bytes": 5773,
+      "path": "terratorch/models/backbones/terramind/tokenizer/models/unet/nn.py",
+      "sha256": "5b654e0a4b63fd39e526cfc49023d9c20cfe19eb9d89fa8c6322207fd1fe3c42"
+    },
+    {
+      "bytes": 27251,
+      "path": "terratorch/models/backbones/terramind/tokenizer/models/unet/unet.py",
+      "sha256": "a04cde8e3bce5f36e4cd9f298752665709ff387af2351a9e9df0d3668cf44e70"
+    },
+    {
+      "bytes": 46576,
+      "path": "terratorch/models/backbones/terramind/tokenizer/models/uvit.py",
+      "sha256": "ce7fd9d2241015ba35170c9418690f1475cd4a1e3e2ff9f42d4b585d197d6a35"
+    },
+    {
+      "bytes": 33792,
+      "path": "terratorch/models/backbones/terramind/tokenizer/models/vit_models.py",
+      "sha256": "565a3af554da2449e8b66297315e94d323a281bdbbd66e7b5d0a5f620cdce813"
+    },
+    {
+      "bytes": 165,
+      "path": "terratorch/models/backbones/terramind/tokenizer/quantizers/__init__.py",
+      "sha256": "43269ca2cb9dab81e06c038a2b723a48c2aacf86b1326bdf9b62e67b254025d5"
+    },
+    {
+      "bytes": 2939,
+      "path": "terratorch/models/backbones/terramind/tokenizer/quantizers/quantize_finite_scalar.py",
+      "sha256": "a7961a903e2749a69e17566cf9a69f115436c1c194798b6c9a6e590d0fc569f1"
+    },
+    {
+      "bytes": 20285,
+      "path": "terratorch/models/backbones/terramind/tokenizer/quantizers/quantize_lucid.py",
+      "sha256": "9d629e7383bc7a030ddf2e6802bfaee789775e4298df4c26db828816a2775bce"
+    },
+    {
+      "bytes": 4430,
+      "path": "terratorch/models/backbones/terramind/tokenizer/quantizers/quantize_memcodes.py",
+      "sha256": "6d1b7e328e6a6653aa606828b5ddc74db6163e9e26cf2e231601e45ea7555474"
+    },
+    {
+      "bytes": 163,
+      "path": "terratorch/models/backbones/terramind/tokenizer/scheduling/__init__.py",
+      "sha256": "dbda9d785afd5ff061848ba8db33ace685e954d381301330d0e689a8ba659af8"
+    },
+    {
+      "bytes": 6195,
+      "path": "terratorch/models/backbones/terramind/tokenizer/scheduling/diffusion_pipeline.py",
+      "sha256": "3c60d8fe58ffe3809fa9d5d4e62fd3c3f7b8431316c37d00b61ac288e123dce9"
+    },
+    {
+      "bytes": 21484,
+      "path": "terratorch/models/backbones/terramind/tokenizer/scheduling/scheduling_ddim.py",
+      "sha256": "650a6297f430dbac82ec711481672ef258d7d366fcf17a17f9bba5ae109448ea"
+    },
+    {
+      "bytes": 21685,
+      "path": "terratorch/models/backbones/terramind/tokenizer/scheduling/scheduling_ddpm.py",
+      "sha256": "e7db17c48d720f078c74826f53731378d14c00c504ff45d7b02244e19ed26d8f"
+    },
+    {
+      "bytes": 4054,
+      "path": "terratorch/models/backbones/terramind/tokenizer/scheduling/scheduling_utils.py",
+      "sha256": "c645491805056871b6f408656ef95950d633af3f5aac2e5cb3f94d6d6f2300b0"
+    },
+    {
+      "bytes": 0,
+      "path": "terratorch/models/backbones/terramind/tokenizer/text/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 5769,
+      "path": "terratorch/models/backbones/terramind/tokenizer/text/text_tokenizer.py",
+      "sha256": "ffc30985d79a8392d2c592d95eab7ff46e2f17eb47468852e85f8ee10624b59c"
+    },
+    {
+      "bytes": 7582,
+      "path": "terratorch/models/backbones/terramind/tokenizer/tokenizer_backbones_register.py",
+      "sha256": "720ab090309777f036cb3d00eef31a108e10ef8f6d7283213eaf741cee70a6f8"
+    },
+    {
+      "bytes": 30241,
+      "path": "terratorch/models/backbones/terramind/tokenizer/tokenizer_register.py",
+      "sha256": "6e586d38167626360d99df21c3461267f8b8cdcf18ba560a944be173d7f3ee9e"
+    },
+    {
+      "bytes": 34946,
+      "path": "terratorch/models/backbones/terramind/tokenizer/vqvae.py",
+      "sha256": "6f6a0f9f9f7892df57d85c16a1c6c875ffb6c95b7fc0979560688c9dcc994ed4"
+    },
+    {
+      "bytes": 1947,
+      "path": "terratorch/models/backbones/terramind/tokenizer/vqvae_backbone.py",
+      "sha256": "48375c7e5ad283607f376111f36027e9e0ae13a9424a2defeb3096824f0ffcba"
+    },
+    {
+      "bytes": 1739,
+      "path": "terratorch/models/backbones/terramind/utils.py",
+      "sha256": "7a68357b76fbec1d5cded79ef7ad1d6bb3597258a3265f2027d131f2ebc64710"
+    }
+  ],
+  "scope": "Reviewed installed upstream source inventory; no upstream implementation or assets bundled"
+}

@@ -1,0 +1,22 @@
+name: CPU and static checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  contracts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Static source and public documentation (no network)
+        run: python3.12 -I -B tools/check_public_source.py --report "$RUNNER_TEMP/aureon-static-result.json"
+      - name: Standard-library contracts (no models or package installation)
+        run: |
+          python3.12 -B packaging/ci_cpu.py --output "$RUNNER_TEMP/aureon-cpu-result.json"
+          cat "$RUNNER_TEMP/aureon-cpu-result.json"

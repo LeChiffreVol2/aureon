@@ -1,0 +1,17 @@
+{
+  "schema": "aureon.local_scene_spec.v1",
+  "kind": "aligned",
+  "scene_id": "my-field",
+  "expected_crs": "EPSG:32647",
+  "provenance": {
+    "source_product_id": "REPLACE_WITH_YOUR_PRODUCT_ID",
+    "acquisition_datetime": "REPLACE_WITH_YOUR_ACQUISITION_TIME",
+    "description": "Operator-declared provenance; not independently certified"
+  },
+  "units": "surface_reflectance_x10000",
+  "bands": ["B01", "B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8A", "B09", "B11", "B12"],
+  "raster": "your-aligned-12-band-fp32.tif",
+  "valid_mask": "your-binary-validity-mask.tif",
+  "validity_policy": "REPLACE_WITH_YOUR_MASK_POLICY",
+  "window": [0, 0, 512, 512]
+}

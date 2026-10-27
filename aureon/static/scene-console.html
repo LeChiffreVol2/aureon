@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' blob: data:; font-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <title>AUREON — Local console</title>
+  <link rel="stylesheet" href="/console/scene-console.css">
+  <script src="/console/scene-console.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#workspace">Skip to workspace</a>
+<header class="topbar"><a class="brand" href="https://aureon-foundation.vercel.app/#home" aria-label="AUREON product">AUREON</a><span class="environment"><span class="dot" aria-hidden="true"></span> LOCAL WORKSPACE</span><a class="docs-link" href="https://aureon-foundation.vercel.app/#docs-async">API docs</a></header>
+<main id="workspace" class="workspace">
+  <div class="page-heading"><p class="eyebrow">AUREON / LOCAL CONSOLE</p><h1>Your inference workspace.</h1><p class="intro">Connect a worker. Run a scene. Bring the result into GIS.<br>The connected worker identifies the KAO-TerraMind model used for each scene.</p></div>
+  <section id="hosted-guide" class="hosted-guide" hidden aria-labelledby="hosted-title"><p class="eyebrow">RUNS ON YOUR COMPUTER</p><h2 id="hosted-title">Open your local workspace.</h2><p>This website introduces the console. Job submission and authenticated downloads run on the same local origin as your manually started scene service.</p><ol><li><strong>Start the local service.</strong><span>Use the prepared environment, checkpoint and registered scene from the API guide.</span></li><li><strong>Open its console.</strong><span>The default address is http://127.0.0.1:8031/console. Use your service's port if different.</span></li><li><strong>Connect and run.</strong><span>Paste the session token only in that local console. Submit a scene explicitly, then download verified COGs.</span></li></ol><div class="guide-actions"><a class="button primary" href="http://127.0.0.1:8031/console">Open local console</a><a class="button secondary" href="/#docs-async-start">Read setup instructions</a></div><p class="field-help">No hosted inference or remote connection is available from this page.</p></section>
+  <div id="test-banner" class="notice test-notice" hidden>CPU TEST SERVICE · Synthetic responses only. No model execution or performance evidence.</div>
+  <noscript><div class="notice">JavaScript is required to connect, submit jobs and verify downloads. This page never starts a model by itself.</div></noscript>
+  <div class="workspace-grid" id="local-workspace">
+    <aside class="connection-panel panel" aria-labelledby="connection-heading">
+      <p class="eyebrow">01 / CONNECTION</p><h2 id="connection-heading">Connect your service.</h2>
+      <p class="supporting">Start the local service manually, then paste its session token. Connecting only reads service information.</p>
+      <div class="origin"><span>LOCAL API ADDRESS</span><code id="api-origin">Current local origin</code></div>
+      <form id="connect-form" autocomplete="off">
+        <label for="session-token">Session token</label><input id="session-token" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="128" placeholder="Paste from this service’s token.txt" required aria-describedby="token-help">
+        <p id="token-help" class="field-help">Kept in memory only. The field clears when you connect. Disconnect or reload to forget the token.</p>
+        <button id="connect-button" class="button primary" type="submit">Connect</button>
+      </form>
+      <div id="connected-actions" class="connected-actions" hidden><button id="refresh-button" class="button secondary" type="button">Refresh status</button><button id="disconnect-button" class="text-button" type="button">Disconnect &amp; forget token</button></div>
+      <p id="connection-state" class="connection-state" role="status" aria-live="polite">Not connected</p>
+      <details class="startup"><summary>How to start this local service</summary><p>From the prepared AUREON workspace, manually start the scene API in WSL when the GPU is available. Use a fresh service directory.</p><p>Open its <code>token.txt</code> locally and paste the token above. Do not include it in URLs, screenshots or logs.</p><a href="https://aureon-foundation.vercel.app/#docs-async-start">Manual startup &amp; shutdown instructions</a><p>UI assets are captured at service startup. Restart the service to load updated console files.</p></details>
+      <div class="local-scope"><strong>One local session.</strong><p>This console does not start or stop the service. Disconnecting stops observation; accepted jobs can continue. It is not a hosted or multi-tenant service.</p></div>
+    </aside>
+    <div class="main-column">
+      <section class="service-panel panel" aria-labelledby="service-heading"><div class="panel-heading"><div><p id="model-label" class="eyebrow">KAO-TerraMind / LOCAL WORKER</p><h2 id="service-heading">Service status</h2></div><span id="service-badge" class="badge neutral">Not connected</span></div>
+        <div class="service-metrics"><div><span>WAITING QUEUE</span><strong id="queue-value">—</strong></div><div><span>MODEL LOADS</span><strong id="loads-value">—</strong></div><div><span>COMPLETED JOBS</span><strong id="completed-value">—</strong></div></div>
+        <div class="service-meta"><span id="precision-label">Precision will be read from the worker.</span><span id="last-observed">No service data loaded</span></div>
+        <details id="worker-details" hidden><summary>Worker identity</summary><dl class="identity-list"><dt>Worker ID</dt><dd id="worker-id">—</dd><dt>Startup receipt SHA-256</dt><dd id="startup-hash">—</dd></dl><p class="field-help">Local identity evidence, not attestation of an untrusted server. Full checkpoint verification happens at startup and controlled shutdown.</p></details>
+      </section>
+      <section class="submit-panel panel" aria-labelledby="submit-heading"><div class="panel-heading"><div><p class="eyebrow">02 / NEW JOB</p><h2 id="submit-heading">Run a scene.</h2></div><span class="step-count">Sentinel-2 to COG</span></div>
+        <form id="submit-form"><label for="scene-select">Sentinel-2 scene ID</label><select id="scene-select" disabled><option value="">Connect to load registered scenes</option></select><p class="field-help">Scenes and preprocessing are registered at service startup. <a href="https://aureon-foundation.vercel.app/#docs-scene-prepare">Prepare an audited scene</a></p>
+          <div class="submit-footer"><p>Submitting runs the connected KAO-TerraMind model on the local GPU.</p><button id="submit-button" type="submit" class="button primary" disabled>Run inference</button></div>
+        </form><p id="submission-message" class="action-message" role="status" aria-live="polite"></p>
+      </section>
+      <section class="jobs-panel panel" aria-labelledby="jobs-heading"><div class="panel-heading"><div><p class="eyebrow">03 / RESULTS</p><h2 id="jobs-heading">Inference results <span id="job-count" class="count">0</span></h2></div><span id="poll-state" class="poll-state">No jobs observed</span></div>
+        <p class="supporting">Download the class map to open in GIS. Keep the validity mask alongside it; provenance and the job receipt explain how the result was produced. Every download is verified before saving.</p>
+        <div id="jobs-empty" class="empty-state"><p class="empty-label">NO RESULTS YET</p><h3>Your class maps will appear here.</h3><p>Connect, select a scene and submit a job.<br>No model runs when you open this page.</p></div>
+        <div id="job-list" class="job-list"></div>
+        <details class="track-job"><summary>Track an existing job in this service</summary><p>Jobs shown here are remembered in this tab. After a reload, use a job ID from the same running service to retrieve its status.</p><form id="track-form"><label for="track-id">Job ID</label><div class="track-fields"><input id="track-id" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="32" pattern="[0-9a-f]{32}" placeholder="32 lowercase hexadecimal characters" required><button id="track-button" class="button secondary" type="submit" disabled>Track job</button></div></form><p id="track-message" class="action-message" role="status" aria-live="polite"></p></details>
+      </section>
+    </div>
+  </div>
+  <footer><span>AUREON / SPECIALIZED MODEL INFERENCE</span><p>Local API · Explicit execution · Recorded provenance</p><a href="https://aureon-foundation.vercel.app/#docs-async">Read the API contract</a></footer>
+</main>
+</body>
+</html>

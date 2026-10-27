@@ -1,0 +1,28 @@
+{
+  "schema": "aureon.local_scene_spec.v1",
+  "kind": "l2a",
+  "scene_id": "my-l2a-field",
+  "expected_crs": "EPSG:32647",
+  "provenance": {
+    "source_product_id": "REPLACE_WITH_YOUR_PRODUCT_ID",
+    "description": "Replace all example radiometry with the supplied product's actual metadata"
+  },
+  "units": "stored_dn",
+  "bands": {
+    "B01": "bands/B01.tif", "B02": "bands/B02.tif", "B03": "bands/B03.tif",
+    "B04": "bands/B04.tif", "B05": "bands/B05.tif", "B06": "bands/B06.tif",
+    "B07": "bands/B07.tif", "B08": "bands/B08.tif", "B8A": "bands/B8A.tif",
+    "B09": "bands/B09.tif", "B11": "bands/B11.tif", "B12": "bands/B12.tif"
+  },
+  "scl": "bands/SCL.tif",
+  "radiometry": {
+    "quantification_value": 10000,
+    "offsets": {
+      "B01": -1000, "B02": -1000, "B03": -1000, "B04": -1000,
+      "B05": -1000, "B06": -1000, "B07": -1000, "B08": -1000,
+      "B8A": -1000, "B09": -1000, "B11": -1000, "B12": -1000
+    },
+    "product_metadata": "MTD_MSIL2A.xml"
+  },
+  "window": [12, 12, 512, 512]
+}

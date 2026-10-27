@@ -1,0 +1,52 @@
+{
+  "schema": "aureon.review_license_sources.v1",
+  "checked_date": "2026-10-23",
+  "status": "review_only",
+  "files": [
+    {
+      "path": "LICENSE",
+      "source_url": "https://www.apache.org/licenses/LICENSE-2.0.txt",
+      "bytes": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "git_blob_sha1": "d645695673349e3947e8e5ae42332d0ac3164cd7",
+      "expected_git_blob_sha1": null,
+      "modified": false
+    },
+    {
+      "path": "third-party-licenses/terratorch-948b553-LICENSE.txt",
+      "source_url": "https://raw.githubusercontent.com/torchgeo/terratorch/948b5535092f847e1ddc90e3f7ef7a67094725c0/LICENSE",
+      "bytes": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "git_blob_sha1": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+      "expected_git_blob_sha1": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+      "modified": false
+    },
+    {
+      "path": "third-party-licenses/terratorch-89a3ed1-LICENSE.txt",
+      "source_url": "https://raw.githubusercontent.com/torchgeo/terratorch/89a3ed13d7a6272c009c4c5fbabf62461fcfb16c/LICENSE",
+      "bytes": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "git_blob_sha1": "d645695673349e3947e8e5ae42332d0ac3164cd7",
+      "expected_git_blob_sha1": "d645695673349e3947e8e5ae42332d0ac3164cd7",
+      "modified": false
+    },
+    {
+      "path": "third-party-licenses/kao-terramind-2d8a9c8-LICENSE.txt",
+      "source_url": "https://raw.githubusercontent.com/kaopanboonyuen/KAO-TerraMind/2d8a9c8953e9bfbec01fae4d80ce5ffcba67c777/LICENSE",
+      "bytes": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "git_blob_sha1": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+      "expected_git_blob_sha1": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+      "modified": false
+    },
+    {
+      "path": "third-party-licenses/vllm-8a5cf54-LICENSE.txt",
+      "source_url": "https://raw.githubusercontent.com/vllm-project/vllm/8a5cf5438728180210aea43897d6a717de4b46ec/LICENSE",
+      "bytes": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "git_blob_sha1": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+      "expected_git_blob_sha1": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+      "modified": false
+    }
+  ]
+}

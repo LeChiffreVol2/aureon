@@ -1,0 +1,71 @@
+AUREON Foundation by Norvique
+Copyright 2026 Norvique Company
+
+AUREON Foundation is a project under Norvique Company.
+AUREON-owned contributions are licensed under Apache License 2.0.
+Contact and private security reporting: norviccompanylimited@gmail.com
+
+This file provides attribution information. It does not modify the terms of
+the accompanying licenses. The approved scoped rights disposition is described
+in docs/RIGHTS.md; third-party attribution remains below.
+
+TerraTorch
+----------
+Copyright contributors to the Terratorch project
+
+AUREON's aureon/legacy_reference.py adapts the learned pyramid layer layout
+and forward ordering from TerraTorch's UperNetDecoder at commit
+948b5535092f847e1ddc90e3f7ef7a67094725c0. AUREON adds validation, lazy
+registration, and a subclass that delegates the UPerNet core to the
+separately installed TerraTorch package. The upstream decoder states that
+it was adapted from MMSegmentation; that ancestry is acknowledged here.
+
+AUREON's checkpoint migration is informed by TerraTorch commit
+89a3ed13d7a6272c009c4c5fbabf62461fcfb16c and its legacy-scale migration tests.
+
+KAO-TerraMind
+-------------
+Author: Teerapong Panboonyuen
+KAO-TerraMind (A, B, C): copyright 2026 Teerapong Panboonyuen, as stated in
+the upstream project README.
+
+The Sentinel-2 normalization constants, band ordering and class taxonomy
+used in aureon/catalog.py and aureon/recipe.py come from the published
+KAO-TerraMind C inference helper at revision
+4e7252d3c83b3e877744da214005184a4133883f. AUREON supplies its own bounded
+tiling, validation and serving implementations. The helper identifies the
+normalization values as TerraMind S2L2A pre-training statistics.
+
+Research attribution requested by the upstream author:
+- Teerapong Panboonyuen (2026), KaoTerraMind: Targeted Adaptation of
+  Geospatial Foundation Models for Dense Prediction. Upstream lists this
+  as a manuscript in preparation.
+- Johannes Jakubik and collaborators (2025), TerraMind: Large-Scale
+  Generative Multimodality for Earth Observation. ICCV 2025.
+
+vLLM interoperability references
+--------------------------------
+Copyright contributors to the vLLM project
+Copyright 2025 The vLLM team.
+Copyright 2025 IBM.
+
+These notices appear in the upstream TerraTorch model wrapper consulted
+for AUREON interoperability. The recorded wrapper blob
+ce04acc72d379f0ebd8314d831a301ae02271a4f is present at vLLM commit
+8a5cf5438728180210aea43897d6a717de4b46ec. AUREON's bundle and client code
+references this wrapper and the vLLM 0.19.0 pooling protocol; the wrapper
+implementation is not vendored by this candidate.
+
+See THIRD-PARTY-NOTICES.md for exact source links, scope, and license files.
+Model weights, satellite imagery, labels, and private training data are
+not included in or licensed by this source-package proposal.
+
+TerraMind generation integration
+-------------------------------
+The candidate integrates separately installed TerraTorch 1.2.13 TerraMind
+generation and S1GRD tokenizer implementations. TerraTorch contributors retain
+their attribution. The reviewed installed 37-file source hashes are recorded
+in aureon/terramind_native/upstream-source.json. AUREON adds strict local
+loading, request isolation, unchanged-conditioning reuse, guarded denoiser
+capture and synthetic geospatial delivery. No model/tokenizer weights or
+upstream runtime source are bundled by this integration.

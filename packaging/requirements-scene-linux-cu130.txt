@@ -1,0 +1,9 @@
+# Linux x86_64, CPython 3.12; PyPI torch 2.14.1 contains CUDA 13.0.
+# Primary scene profile. Keep the legacy vLLM stack in a separate environment.
+-c constraints-linux-py312-cu130.txt
+numpy==2.5.4
+torch==2.14.1
+torchvision==0.29.1
+terratorch==1.2.13
+torchgeo==0.9.0
+rasterio==1.5.2

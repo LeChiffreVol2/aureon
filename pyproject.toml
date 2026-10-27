@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools==84.2.1"]
+build-backend = "build_backend"
+backend-path = ["packaging"]
+
+[project]
+name = "aureon-inference"
+version = "0.1.0"
+requires-python = ">=3.12,<3.13"
+description = "AUREON inference engine for KAO-TerraMind and TerraMind"
+authors = [{name = "Norvique Company", email = "norviccompanylimited@gmail.com"}]
+readme = "packaging/README.md"
+license = "Apache-2.0"
+license-files = ["packaging/review/LICENSE", "packaging/review/NOTICE", "packaging/review/THIRD-PARTY-NOTICES.md", "packaging/review/REVIEW-STATUS.md", "packaging/review/SOURCE-NOTICE-OVERLAYS.json", "packaging/review/third-party-licenses/sources.json", "packaging/review/third-party-licenses/terratorch-948b553-LICENSE.txt", "packaging/review/third-party-licenses/terratorch-89a3ed1-LICENSE.txt", "packaging/review/third-party-licenses/kao-terramind-2d8a9c8-LICENSE.txt", "packaging/review/third-party-licenses/vllm-8a5cf54-LICENSE.txt"]
+classifiers = ["Development Status :: 3 - Alpha", "Programming Language :: Python :: 3.12", "Operating System :: POSIX :: Linux"]
+dependencies = ["numpy>=2.2.6,<=2.5.4"]
+
+[project.optional-dependencies]
+geo = ["rasterio==1.5.2"]
+scene = ["numpy==2.5.4", "rasterio==1.5.2", "torch==2.14.1", "torchvision==0.29.1", "terratorch==1.2.13", "torchgeo==0.9.0"]
+scene-legacy = ["numpy==2.2.6", "rasterio==1.5.2", "torch==2.10.0", "torchvision==0.25.0", "terratorch==1.2.13", "torchgeo==0.9.0"]
+vllm = ["numpy==2.2.6", "rasterio==1.5.2", "torch==2.10.0", "torchvision==0.25.0", "terratorch==1.2.13", "vllm==0.19.0"]
+generation = ["numpy==2.2.6", "rasterio==1.5.2", "torch==2.10.0", "torchvision==0.25.0", "terratorch==1.2.13", "diffusers==0.39.0", "einops==0.8.2", "huggingface-hub==0.36.2", "timm==1.0.30", "transformers==4.57.6"]
+acquire = ["rasterio==1.5.2", "requests==2.34.2", "pyproj==3.8.0", "huggingface-hub==2.3.0"]
+
+[project.scripts]
+aureon-engine = "aureon.api.cli:main"
+aureon-service = "aureon.serving.__main__:main"
+aureon-service-client = "aureon.serving.client:main"
+aureon = "aureon.__main__:main"
+aureon-scene = "aureon.scene_cli:main"
+aureon-scene-api = "aureon.scene_api.__main__:main"
+aureon-audit-scene = "aureon.scene_pipeline.audit:main"
+aureon-audit-api = "aureon.scene_api.audit:main"
+aureon-client = "aureon.client:main"
+aureon-prepare = "aureon.prepare.__main__:main"
+aureon-preflight = "aureon.preflight:main"
+
+[tool.setuptools]
+include-package-data = false
+packages = ["aureon", "aureon.api", "aureon.api.examples", "aureon.cloud", "aureon.prepare", "aureon.scene_api", "aureon.scene_pipeline", "aureon.terramind_native", "aureon.serving"]
+
+[tool.setuptools.package-data]
+aureon = ["static/scene-console.html", "static/scene-console.js", "static/scene-console.css"]
+"aureon.api.examples" = ["README.md"]
+
+
+"aureon.terramind_native" = ["upstream-source.json"]

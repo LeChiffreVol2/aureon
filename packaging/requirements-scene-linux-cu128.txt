@@ -1,0 +1,9 @@
+# Linux x86_64, CPython 3.12; install in a fresh environment.
+# Constraints are versions observed in the accepted WSL runtime, not a hash lock.
+--extra-index-url https://download.pytorch.org/whl/cu128
+-c constraints-linux-py312-cu128.txt
+numpy==2.2.6
+torch==2.10.0+cu128
+torchvision==0.25.0+cu128
+terratorch==1.2.13
+rasterio==1.5.2

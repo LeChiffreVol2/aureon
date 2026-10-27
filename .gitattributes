@@ -1,0 +1,7 @@
+* text=auto eol=lf
+# Preserve exact accepted runtime, locks and license bytes across checkouts.
+aureon/** -text
+packaging/lock-*.txt -text
+packaging/review/LICENSE -text
+packaging/review/third-party-licenses/*.txt -text
+LICENSE -text
