@@ -165,18 +165,11 @@ For installation problems, see [troubleshooting](packaging/SUPPORT.md).
 
 **AUREON Foundation by Norvique** is a project of **Norvique Company**.
 AUREON-owned contributions are licensed under [Apache-2.0](LICENSE).
-AUREON supports KAO-TerraMind and TerraMind using TerraTorch's model implementations
-and PyTorch execution. Its default generation path does not require vLLM.
-vLLM is used in comparison baselines and optional interoperability code; it is
-not the execution engine behind that default path.
 
-Preserve the [NOTICE](NOTICE) and [third-party attribution](packaging/review/THIRD-PARTY-NOTICES.md),
-including the notices for retained interoperability references.
-Model weights and data retain their own terms.
-
-The [scoped rights statement](docs/RIGHTS.md) records the approved treatment of
-upstream constants/class names and the preserved upstream README discrepancy.
-It supersedes only the pending owner-disposition wording in the frozen archives.
+We acknowledge the work of KAO-TerraMind, TerraMind, TerraTorch and PyTorch.
+See [NOTICE](NOTICE), [third-party attribution](packaging/review/THIRD-PARTY-NOTICES.md)
+and [licensing scope](docs/RIGHTS.md) for details. Model weights and datasets
+retain their respective terms.
 
 Contact: [norviccompanylimited@gmail.com](mailto:norviccompanylimited@gmail.com).
 Report vulnerabilities privately through [SECURITY.md](SECURITY.md).
