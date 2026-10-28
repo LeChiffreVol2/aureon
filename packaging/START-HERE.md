@@ -79,7 +79,6 @@ installing into an existing unrelated environment. A successful `pip check`
 reports no broken requirements; the verifier and profile command report
 `"status": "passed"`. No step above loads weights or runs inference.
 For offline dependency installation, see [locked profiles](LOCKED-INSTALL.md).
-vLLM is not a dependency of this TerraMind workflow.
 
 In a **new terminal**, reactivate the environment before continuing:
 
@@ -255,10 +254,9 @@ aureon prepare-vllm --model kao-terramind-b \
 aureon verify-bundle --bundle "$HOME/aureon-assets/kao-terramind-b"
 ```
 
-Despite its historical name, `prepare-vllm` creates the local bundle used by the
-Engine. It does not start vLLM, run inference or download files. It verifies the
-pinned identity before CPU weights-only conversion, using CPU memory and disk.
-No operator-created bundle is required.
+This command creates the local bundle used by AUREON Engine. It verifies the
+pinned checkpoint identity before CPU weights-only conversion, using CPU memory
+and disk. It does not start inference or download files.
 
 Prepare your scene with step 3–4 above (the TerraMind crop is unnecessary here), then:
 
