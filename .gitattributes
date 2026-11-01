@@ -2,6 +2,10 @@
 # Preserve exact accepted runtime, locks and license bytes across checkouts.
 aureon/** -text
 packaging/lock-*.txt -text
+pyproject.toml -text
+packaging/runtime-files.json -text
+packaging/review/SOURCE-NOTICE-OVERLAYS.json -text
+packaging/review/SELECTED-ENGINE.json -text
 packaging/review/LICENSE -text
 packaging/review/third-party-licenses/*.txt -text
 LICENSE -text

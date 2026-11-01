@@ -1,28 +1,36 @@
-# Exact dependency installation
+# Dependency locks and compatible environments
 
-Follow [START-HERE.md](START-HERE.md) for the complete installed workflow.
-Use Linux x86_64, CPython 3.12, one new environment per profile, and the exact wheel
-identified in the release kit's `ARTIFACTS.json`. No editable checkout is required.
+Use the [single current AUREON distribution](CANDIDATE-QUICKSTART.md).
+Generation dependencies are included by default; no separate feature/core wheel
+is needed. `[generation]` and `[geo]` remain compatibility extras on the same
+distribution. Plain pip installation uses the normal resolver and build isolation.
+The current working delivery remains unpublished; PyPI is not open.
 
-| Workflow | Bootstrap | Dependency lock | Runtime environment |
-| --- | --- | --- | --- |
-| KAO-TerraMind B | lock-bootstrap-scene.txt | lock-scene-linux-py312-cu130.txt | scene |
-| TerraMind base | lock-bootstrap-generation.txt | lock-generation-linux-py312-cu128.txt | generation |
-| KAO-TerraMind A/C | generation bootstrap | generation lock | scene-legacy |
+The tested generation stack uses Linux/WSL Python 3.12, Torch 2.10.0,
+TorchVision 0.25.0, TerraTorch 1.2.13 and NumPy 2.2.6. Use matching source-archive
+locks to reproduce the dependency snapshot, or validate your existing compatible
+environment before installing the same wheel with `--no-deps`.
 
-Install bootstrap first, then the selected lock with `--require-hashes
---no-build-isolation`, then the wheel with `--no-deps --no-index`.
-The locks include source distributions where no compatible upstream wheel exists.
-The host venv bootstraps pip; record `python --version` and `python -m pip --version`
-when reporting a problem. Keep installed dependencies out of source and release
-archives. `dependency-inventory.json` records origins, hashes and declared
-dependencies. Hashes establish identity, not absence of vulnerabilities.
+```sh
+python -m pip install --require-hashes -r packaging/lock-bootstrap-generation.txt
+python -m pip install --require-hashes --no-build-isolation -r packaging/lock-generation-linux-py312-cu128.txt
+python -m pip install --no-deps /absolute/aureon_inference-0.1.0-py3-none-any.whl
+python -m pip check
+```
 
-CUDA-enabled dependencies consume several GiB. A compatible NVIDIA driver is
-separate from this kit. The verified model machine is RTX3070/WSL; successful pip
-installation alone does not qualify a new driver/device. No automatic environment
-switching occurs. Do not merge locks, add all extras, or silently upgrade a failed
-pin. Use [support](SUPPORT.md) for actionable diagnostics.
+These bootstrap/no-build-isolation flags belong to locked reproduction, not normal
+pip installation. Offline use needs all locked archives via `--no-index --find-links`.
+The lock includes source distributions; `dependency-inventory.json` records their
+origins and hashes. Installation does not acquire imagery/checkpoints or run models.
 
-The release manifest records actual installed CPU checks. Final model/HTTP
-acceptance is summarized in the [support matrix](../docs/MODEL-SUPPORT.md); it is not inferred from packaging.
+KAO-TerraMind full-reference support uses the same distribution with the optional
+`scene-legacy` dependencies (including TorchGeo 0.9.0) and that explicit environment
+contract. Its previous GPU receipts keep their own artifact scope. The original
+published alpha's scene stack uses different Torch/NumPy versions and is not a
+compatible environment into which to force this generation wheel. Keep historical
+release instructions with their release; they are not additional current builds.
+
+vLLM is not required by the public inference workflow. Old core-profile build
+tooling and comparator dependencies are retained for development/reproduction,
+not offered as competing current installations. A shared version string is not
+an artifact identity: verify the wheel/source against the accompanying receipt.

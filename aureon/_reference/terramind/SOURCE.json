@@ -1,0 +1,145 @@
+{
+  "attribution": "AUREON-owned runtime, Apache-2.0; original source headers retained. TerraTorch/TerraMind remain separately installed dependencies with their own terms. No comparator or model weights included.",
+  "files": [
+    {
+      "bytes": 377,
+      "mode": "verbatim",
+      "origin_path": "aureon/terramind_native/__init__.py",
+      "path": "aureon/_reference/terramind/__init__.py",
+      "sha256": "3f4a34cd60cd37d7abddd1966ca0550ce3980e747e08868fa7eaa2efb4f03ffb",
+      "source_bytes": 377,
+      "source_sha256": "3f4a34cd60cd37d7abddd1966ca0550ce3980e747e08868fa7eaa2efb4f03ffb"
+    },
+    {
+      "bytes": 3263,
+      "mode": "verbatim",
+      "origin_path": "aureon/terramind_native/common.py",
+      "path": "aureon/_reference/terramind/common.py",
+      "sha256": "1f1f796f8fcbebf4bbb50d6831e6dde8eed9563e042f8ee2d8a601e28a5bebf3",
+      "source_bytes": 3263,
+      "source_sha256": "1f1f796f8fcbebf4bbb50d6831e6dde8eed9563e042f8ee2d8a601e28a5bebf3"
+    },
+    {
+      "bytes": 3142,
+      "mode": "verbatim",
+      "origin_path": "aureon/terramind_native/compat.py",
+      "path": "aureon/_reference/terramind/compat.py",
+      "sha256": "989194b973edca512550f60a5fcc1d1d56703fd5b3432d4eaf1902479267c258",
+      "source_bytes": 3142,
+      "source_sha256": "989194b973edca512550f60a5fcc1d1d56703fd5b3432d4eaf1902479267c258"
+    },
+    {
+      "bytes": 6137,
+      "mode": "verbatim",
+      "origin_path": "aureon/terramind_native/denoiser_binding.py",
+      "path": "aureon/_reference/terramind/denoiser_binding.py",
+      "sha256": "368d87a254de6f0fa5a78c1974256fcfdbfb0ac8fc21e4547b25c81554f2026a",
+      "source_bytes": 6137,
+      "source_sha256": "368d87a254de6f0fa5a78c1974256fcfdbfb0ac8fc21e4547b25c81554f2026a"
+    },
+    {
+      "bytes": 4729,
+      "mode": "verbatim",
+      "origin_path": "aureon/terramind_native/denoiser_graph.py",
+      "path": "aureon/_reference/terramind/denoiser_graph.py",
+      "sha256": "bc886eb9fc3d726f3466bbeb11bd8d22df5745fb64e7b50a575b1f551691b1fe",
+      "source_bytes": 4729,
+      "source_sha256": "bc886eb9fc3d726f3466bbeb11bd8d22df5745fb64e7b50a575b1f551691b1fe"
+    },
+    {
+      "bytes": 6986,
+      "mode": "verbatim",
+      "origin_path": "aureon/terramind_native/geo.py",
+      "path": "aureon/_reference/terramind/geo.py",
+      "sha256": "aa751907569ebfcc1f29ffe317d93189c983c96ab80fadd2b9ce9cd9c27bbaec",
+      "source_bytes": 6986,
+      "source_sha256": "aa751907569ebfcc1f29ffe317d93189c983c96ab80fadd2b9ce9cd9c27bbaec"
+    },
+    {
+      "bytes": 6193,
+      "mode": "verbatim",
+      "origin_path": "aureon/terramind_native/graph_runtime.py",
+      "path": "aureon/_reference/terramind/graph_runtime.py",
+      "sha256": "35aab933e6779989a011c4d172b12ae513bc5c54c17f1e00c4021e33690b3d1a",
+      "source_bytes": 6193,
+      "source_sha256": "35aab933e6779989a011c4d172b12ae513bc5c54c17f1e00c4021e33690b3d1a"
+    },
+    {
+      "bytes": 3611,
+      "helper_ast_sha256": {
+        "capture_failure": "7d3f8a360f08dec0f9041ecd3788b053507521a2936ac530b6b1052e59127e00",
+        "trace_native": "20d89785ae65b3097db3426403b23bf5eadd2f9ecf216bb182d018e95b4f0d1f"
+      },
+      "mode": "verbatim_prefix",
+      "omitted_functions": [
+        "compare_pair",
+        "generate_one",
+        "run_screen"
+      ],
+      "origin_path": "aureon/terramind_native/harness.py",
+      "path": "aureon/_reference/terramind/harness.py",
+      "sha256": "a79357a11ce5e04b1a18c46dd913b6d557fac9b44b8e34472d79f54d5c7458a4",
+      "source_bytes": 18163,
+      "source_sha256": "b5f80202e10ada85a0c68d1c58b1c88b1f5b85de81982e48ceb9c5505891e6fb",
+      "source_span_bytes": [
+        0,
+        3611
+      ],
+      "source_span_lines": [
+        1,
+        92
+      ]
+    },
+    {
+      "bytes": 7932,
+      "mode": "verbatim",
+      "origin_path": "aureon/terramind_native/loader.py",
+      "path": "aureon/_reference/terramind/loader.py",
+      "sha256": "f52d492c1e41cc367b9221205eda9d34d22ae3403e50aa8394479bfe73addda8",
+      "source_bytes": 7932,
+      "source_sha256": "f52d492c1e41cc367b9221205eda9d34d22ae3403e50aa8394479bfe73addda8"
+    },
+    {
+      "bytes": 2338,
+      "mode": "verbatim",
+      "origin_path": "aureon/terramind_native/reuse.py",
+      "path": "aureon/_reference/terramind/reuse.py",
+      "sha256": "597947b10342bf4133b5a451a25da8e795f0d08b14a2de82dcc0e4d0787d0d97",
+      "source_bytes": 2338,
+      "source_sha256": "597947b10342bf4133b5a451a25da8e795f0d08b14a2de82dcc0e4d0787d0d97"
+    },
+    {
+      "bytes": 2068,
+      "mode": "verbatim",
+      "origin_path": "aureon/terramind_native/rng.py",
+      "path": "aureon/_reference/terramind/rng.py",
+      "sha256": "bab99e6a5c095d08937bb2c10bd48c01550f04bc4ddba8365dcffb0706e257cc",
+      "source_bytes": 2068,
+      "source_sha256": "bab99e6a5c095d08937bb2c10bd48c01550f04bc4ddba8365dcffb0706e257cc"
+    },
+    {
+      "bytes": 25538,
+      "mode": "verbatim",
+      "origin_path": "aureon/terramind_native/session.py",
+      "path": "aureon/_reference/terramind/session.py",
+      "sha256": "e6b73d1682060b506ea98cd344afb82456a332190ce67542f4eb8cba655e5d15",
+      "source_bytes": 25538,
+      "source_sha256": "e6b73d1682060b506ea98cd344afb82456a332190ce67542f4eb8cba655e5d15"
+    },
+    {
+      "bytes": 7864,
+      "mode": "verbatim",
+      "origin_path": "aureon/terramind_native/upstream-source.json",
+      "path": "aureon/_reference/terramind/upstream-source.json",
+      "sha256": "9c216d235b1f36eff56946d7f52b88bee5db1f69c60d6c0504fdb42d78c7d9cc",
+      "source_bytes": 7864,
+      "source_sha256": "9c216d235b1f36eff56946d7f52b88bee5db1f69c60d6c0504fdb42d78c7d9cc"
+    }
+  ],
+  "namespace": "aureon._reference.terramind",
+  "qualification": "Operation-preserving source relocation; no new performance qualification.",
+  "relocation": "Relative imports preserved. __file__ source provenance paths and inventory change. Module process lock is separate; the owned facade holds the broad runtime lifecycle lock.",
+  "schema": "aureon.selected_core_source.v1",
+  "source_archive_sha256": "4c133ca76190c412bf2b4c4c780a2eb5da8c65161bea810173321910a0baea78",
+  "wheel_sha256": "0fa5ef2b9440fcc310a17c76f78df52278cbe2d354015be2046a8e4196715c97"
+}

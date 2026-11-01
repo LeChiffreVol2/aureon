@@ -5,6 +5,16 @@ slice copies, and pinned D2H. Construction is CPU-only; capture is lazy. The
 caller must serialize all other uses of this model during capture/inference.
 This is an unmeasured candidate until separate numerical and timing checks.
 """
+from __future__ import annotations
+from typing import TYPE_CHECKING, Any, Self, cast
+from types import ModuleType, TracebackType
+from collections.abc import Callable
+from .value_types import FloatArray, JsonObject, Pathish
+if TYPE_CHECKING:
+    from torch import Tensor
+    from torch.nn import Module
+    from torch.cuda import CUDAGraph, Stream, Event
+
 from dataclasses import fields, is_dataclass
 from datetime import datetime, timezone
 import hashlib
@@ -27,7 +37,7 @@ OUTPUT_SHAPE = (COUNT, 10, 224, 224)
 MODEL_IDS = {'kao-terramind-a', 'kao-terramind-b', 'kao-terramind-c'}
 
 
-def _original(model, supplied=None):
+def _original(model: Module, supplied: Callable[..., Any] | None=None) -> Callable[..., Any]:
     forward = supplied
     if forward is None:
         installed = getattr(model, '_aureon_cuda_graph', None)
@@ -52,6 +62,18 @@ class FullGroupGraphPipeline:
     through return. ``__call__`` instead returns a newly owned NumPy array.
     Neither path caches results or pads smaller input groups.
     """
+    _stream: Stream | None
+    _completion: Event | None
+    _graph: CUDAGraph | None
+    _host_input: Tensor | None
+    _host_output: Tensor | None
+    _device_input: Tensor | None
+    _device_output: Tensor | None
+    _input_numpy: FloatArray | None
+    _output_numpy: FloatArray | None
+    _error: dict[str, str] | None
+    _cleanup_error: str | None
+    _evidence_error: str | None
 
     execution_backend = 'pytorch_full_group_cuda_graph'
     dtype = 'float32'
@@ -59,7 +81,7 @@ class FullGroupGraphPipeline:
     pin_memory = True
 
     @classmethod
-    def from_reference(cls, reference, evidence_dir):
+    def from_reference(cls, reference: PyTorchPredictor, evidence_dir: Pathish) -> Self:
         if not isinstance(reference, PyTorchPredictor):
             raise ValueError('Supply an existing strictly loaded PyTorchPredictor')
         if (reference.dtype != 'float32' or reference._device.type != 'cuda'
@@ -70,8 +92,8 @@ class FullGroupGraphPipeline:
                        'scope': 'Inherited strict local reference load; weights are not rehashed by this candidate'}, rank=0)
 
     @classmethod
-    def from_verified_worker(cls, model, worker_record, verified_bundle, evidence_dir, *,
-                             original_forward=None, torch_module=None):
+    def from_verified_worker(cls, model: Module, worker_record: JsonObject, verified_bundle: JsonObject, evidence_dir: Pathish, *,
+                             original_forward: Callable[..., Any] | None=None, torch_module: ModuleType | None=None) -> Self:
         if torch_module is None:
             import torch as torch_module
         if (not isinstance(worker_record, dict) or worker_record.get('schema') != 'aureon.worker_attestation.v1'
@@ -81,17 +103,17 @@ class FullGroupGraphPipeline:
                 or worker_record.get('model_id') != verified_bundle.get('model_id')
                 or worker_record.get('bundle_receipt_sha256') != verified_bundle.get('receipt_sha256')
                 or worker_record.get('bundle_files_sha256') != verified_bundle.get('files_sha256')
-                or worker_record.get('precision_settings_actual') != _precision(torch_module)
+                or worker_record.get('precision_settings_actual') != _precision(cast(ModuleType, torch_module))
                 or worker_record.get('loaded_tensor_count') != len(verified_bundle.get('receipt', {}).get('tensor_manifest', {}))):
             raise ValueError('Worker record must match this process, verified bundle, full state and current precision')
         return cls(model, _original(model, original_forward), verified_bundle, evidence_dir,
-                   torch_module=torch_module, rank=worker_record.get('rank'),
+                   torch_module=cast(ModuleType, torch_module), rank=cast(int, worker_record.get('rank')),
                    provenance={'kind': 'same_process_verified_worker',
                        'worker_record_sha256': hashlib.sha256(json.dumps(worker_record, sort_keys=True,
                            separators=(',', ':'), allow_nan=False).encode()).hexdigest(),
                        'scope': 'Inherited same-process worker state attestation; not remote attestation or a fresh value hash'})
 
-    def __init__(self, model, original_forward, verified_bundle, evidence_dir, *, torch_module, provenance, rank):
+    def __init__(self, model: Module, original_forward: Callable[..., Any], verified_bundle: JsonObject, evidence_dir: Pathish, *, torch_module: ModuleType, provenance: JsonObject, rank: int) -> None:
         self.torch, self.model = torch_module, model
         self._forward = _original(model, original_forward)
         self.model_id = verified_bundle.get('model_id')
@@ -134,12 +156,12 @@ class FullGroupGraphPipeline:
         self._check_contract()
         self._event('armed')
 
-    def _check_contract(self):
+    def _check_contract(self) -> None:
         if (self.model.training or _precision(self.torch) != self.precision
                 or getattr(self.model, '_forward_hooks', None) or getattr(self.model, '_forward_pre_hooks', None)):
             raise RuntimeError('Full-group graph requires unchanged FP32 precision, eval mode and no forward hooks')
 
-    def _event(self, event, **extra):
+    def _event(self, event: str, **extra: Any) -> None:
         self._event_count += 1
         record = {'schema': 'aureon.full_group_graph_event.v1', 'event': event,
             'created_utc': datetime.now(timezone.utc).isoformat(), 'state': self.state,
@@ -155,7 +177,7 @@ class FullGroupGraphPipeline:
             json.dump(record, stream, indent=2, allow_nan=False)
             stream.write('\n')
 
-    def _allocate(self):
+    def _allocate(self) -> None:
         torch = self.torch
         with torch.cuda.device(self._device):
             self._stream = torch.cuda.Stream(device=self._device)
@@ -163,39 +185,39 @@ class FullGroupGraphPipeline:
             with torch.cuda.stream(self._stream):
                 self._host_input = torch.empty(INPUT_SHAPE, dtype=torch.float32, device='cpu', pin_memory=True)
                 self._host_output = torch.empty(OUTPUT_SHAPE, dtype=torch.float32, device='cpu', pin_memory=True)
-                if not self._host_input.is_pinned() or not self._host_output.is_pinned():
+                if not cast("Tensor", self._host_input).is_pinned() or not cast("Tensor", self._host_output).is_pinned():
                     raise RuntimeError('Pinned host allocation is mandatory; no pageable fallback')
                 self._device_input = torch.empty(INPUT_SHAPE, dtype=torch.float32, device=self._device)
                 self._device_output = torch.empty(OUTPUT_SHAPE, dtype=torch.float32, device=self._device)
-            self._input_numpy, self._output_numpy = self._host_input.numpy(), self._host_output.numpy()
+            self._input_numpy, self._output_numpy = cast("Tensor", self._host_input).numpy(), cast("Tensor", self._host_output).numpy()
 
-    def _logits(self, value):
+    def _logits(self, value: Any) -> Tensor:
         if isinstance(value, self.torch.Tensor):
             result = value
         elif (is_dataclass(value) and {field.name for field in fields(value)} == {'output', 'auxiliary_heads'}
-              and value.auxiliary_heads in (None, {})):
-            result = value.output
+              and cast(Any, value).auxiliary_heads in (None, {})):
+            result = cast(Any, value).output
         else:
             raise ValueError('Expected tensor logits or TerraTorch ModelOutput without auxiliary heads')
         if (not isinstance(result, self.torch.Tensor) or tuple(result.shape) != (1, *OUTPUT_SHAPE[1:])
                 or result.dtype != self.torch.float32 or not result.is_cuda or result.device != self._device):
             raise ValueError('Each original forward must return CUDA FP32 [1,10,224,224] logits')
-        return result
+        return cast("Tensor", result)
 
-    def _body(self):
-        self._device_input.copy_(self._host_input, non_blocking=True)
+    def _body(self) -> None:
+        cast("Tensor", self._device_input).copy_(cast("Tensor", self._host_input), non_blocking=True)
         for index in range(COUNT):
-            result = self._forward({'S2L2A': self._device_input[index:index + 1]})
-            self._device_output[index:index + 1].copy_(self._logits(result), non_blocking=True)
-        self._host_output.copy_(self._device_output, non_blocking=True)
+            result = self._forward({'S2L2A': cast("Tensor", self._device_input)[index:index + 1]})
+            cast("Tensor", self._device_output)[index:index + 1].copy_(self._logits(result), non_blocking=True)
+        cast("Tensor", self._host_output).copy_(cast("Tensor", self._device_output), non_blocking=True)
 
-    def _capture(self):
+    def _capture(self) -> None:
         self.state = 'capturing'
         self._event('capture-started', warmup_groups=3, warmup_model_forwards=3 * COUNT)
         with self.torch.cuda.stream(self._stream):
             for _ in range(3):
                 self._body()
-        self._stream.synchronize()
+        cast("Stream", self._stream).synchronize()
         self._graph = self.torch.cuda.CUDAGraph()
         with self.torch.cuda.graph(self._graph, stream=self._stream, capture_error_mode='global'):
             self._body()
@@ -204,7 +226,7 @@ class FullGroupGraphPipeline:
         self.state = 'captured'
         self._event('captured', warmup_groups=3, captured_model_forwards=COUNT)
 
-    def _fail(self, error):
+    def _fail(self, error: BaseException) -> None:
         # Never retain a traceback: its frames can hold caller-owned mmap views
         # that must be releasable by the worker after cancellation/failure.
         self.state, self._error = 'failed', {'type': type(error).__name__, 'message': str(error)}
@@ -219,11 +241,11 @@ class FullGroupGraphPipeline:
             self._evidence_error = str(evidence_error)
 
     @staticmethod
-    def _validate_input(values):
+    def _validate_input(values: FloatArray) -> None:
         if not isinstance(values, np.ndarray) or values.dtype != np.dtype('<f4') or values.shape != INPUT_SHAPE:
             raise ValueError('Full-group graph accepts exactly float32 [8,12,224,224]; no padding')
 
-    def _predict(self, values, destination):
+    def _predict(self, values: FloatArray, destination: FloatArray | None) -> FloatArray:
         self._validate_input(values)
         if destination is not None and (not isinstance(destination, np.ndarray)
                 or destination.dtype != np.dtype('<f4') or destination.shape != OUTPUT_SHAPE
@@ -237,33 +259,33 @@ class FullGroupGraphPipeline:
                 self._check_contract()
                 if self._stream is None:
                     self._allocate()
-                np.copyto(self._input_numpy, values, casting='no')
+                np.copyto(cast("FloatArray", self._input_numpy), values, casting='no')
             except BaseException as error:
                 self._fail(error)
                 raise
             # CPU snapshot is owned before validation and H2D. Invalid caller
             # data does not poison a valid graph or modify its output buffers.
-            if not np.isfinite(self._input_numpy).all():
+            if not np.isfinite(cast("FloatArray", self._input_numpy)).all():
                 raise ValueError('Normalized input must contain finite FP32 values')
             try:
                 with self.torch.cuda.device(self._device):
                     current = self.torch.cuda.current_stream(self._device)
                     if current != self._stream:
-                        self._stream.wait_stream(current)
+                        cast("Stream", self._stream).wait_stream(current)
                     if self._graph is None:
                         self._capture()
                     with self.torch.cuda.stream(self._stream):
-                        self._graph.replay()
+                        cast("CUDAGraph", self._graph).replay()
                         self.replay_count += 1
-                        self._completion.record(self._stream)
-                    self._completion.synchronize()
+                        cast("Event", self._completion).record(cast("Stream", self._stream))
+                    cast("Event", self._completion).synchronize()
                 self._check_contract()
-                if not np.isfinite(self._output_numpy).all():
+                if not np.isfinite(cast("FloatArray", self._output_numpy)).all():
                     raise ValueError('Full-group graph produced nonfinite FP32 logits')
                 if destination is None:
-                    result = self._output_numpy.copy(order='C')
+                    result = cast("FloatArray", self._output_numpy).copy(order='C')
                 else:
-                    np.copyto(destination, self._output_numpy, casting='no')
+                    np.copyto(destination, cast("FloatArray", self._output_numpy), casting='no')
                     result = destination
                 self.completed_calls += 1
                 self.completed_tiles += COUNT
@@ -275,19 +297,19 @@ class FullGroupGraphPipeline:
                 self._fail(error)
                 raise
 
-    def __call__(self, normalized_batch):
+    def __call__(self, normalized_batch: FloatArray) -> FloatArray:
         return self._predict(normalized_batch, None)
 
-    def predict_into(self, normalized_batch, output_array):
+    def predict_into(self, normalized_batch: FloatArray, output_array: FloatArray) -> FloatArray:
         """Fill the caller's exclusive output only after replay/D2H/finite checks."""
         return self._predict(normalized_batch, output_array)
 
-    def synchronize(self):
+    def synchronize(self) -> None:
         with self._lock:
             if self._stream is not None:
                 self._stream.synchronize()
 
-    def metadata(self):
+    def metadata(self) -> JsonObject:
         with self._lock:
             buffers = {'host_input': self._host_input, 'host_output': self._host_output,
                        'device_input': self._device_input, 'device_output': self._device_output}
@@ -311,7 +333,7 @@ class FullGroupGraphPipeline:
                 'numerical_parity_verified': False, 'failure': dict(self._error) if self._error else None,
                 'cleanup_error': self._cleanup_error, 'evidence_error': self._evidence_error}
 
-    def close(self):
+    def close(self) -> None:
         with self._lock:
             if self.state == 'closed':
                 return
@@ -323,10 +345,10 @@ class FullGroupGraphPipeline:
             self._completion = self._stream = None
             self.state = 'closed'
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         if self.state in ('closed', 'failed'):
             raise RuntimeError('Full-group graph is unavailable')
         return self
 
-    def __exit__(self, exc_type, exc, traceback):
+    def __exit__(self, exc_type: type[BaseException] | None, exc: BaseException | None, traceback: TracebackType | None) -> None:
         self.close()

@@ -1,6 +1,6 @@
-"""Experimental, explicitly executed TerraMind S2L2A -> S1GRD native slice.
+"""Resident TerraMind S2L2A -> synthetic S1GRD implementation.
 
-Not exported through the accepted Engine API or included in its frozen wheel.
+Artifact-specific support and qualification are documented in the support matrix.
 Importing this package does not import a model runtime.
 """
 from .session import TerraMindSession, SessionBusy, SessionClosed, SessionFailed

@@ -5,6 +5,9 @@
 Use this optional walkthrough after installing the **generation profile** to
 check the installed preparation pipeline before obtaining imagery or weights.
 It requires NumPy, Rasterio and the installed AUREON package, but no GPU or model files.
+It also works with the [core candidate](../packaging/CANDIDATE-QUICKSTART.md) when
+those geospatial dependencies are already available. Keep fixture results separate
+from the candidate guide's inspection of your actual imagery.
 
 The example creates **artificial pixels**, a corresponding mask and an editable
 input specification. It runs the same scene preparation, manifest check and

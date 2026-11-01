@@ -1,4 +1,10 @@
 """Cloud local-v1 client with explicitly bound guarded profile receipts."""
+from __future__ import annotations
+from collections.abc import Sequence
+from typing import Unpack, cast
+from ..client import _RequestOptions
+from ..value_types import JsonObject
+from ..serving.contracts import PathInput
 import argparse
 import copy
 import hashlib
@@ -13,10 +19,10 @@ from .control import CONTRACT, MODEL, file_hash
 
 
 class CloudClient(SceneClient):
-    def status_snapshot(self):
+    def status_snapshot(self) -> JsonObject:
         return self.json('GET','/v1/status')
 
-    def health(self):
+    def health(self) -> JsonObject:
         """Return the bounded control-plane health body, including degraded 503."""
         connection_type=http.client.HTTPSConnection if self._scheme=='https' else http.client.HTTPConnection
         connection=connection_type(self._host,self._port,timeout=self.timeout)
@@ -32,20 +38,20 @@ class CloudClient(SceneClient):
         finally:
             connection.close()
 
-    def cancel_job(self, identifier):
+    def cancel_job(self, identifier: str) -> JsonObject:
         return self.json('POST','/v1/jobs/'+_job_id(identifier)+'/cancel',payload={})
 
-    def json(self, method, path, **kwargs):
+    def json(self, method: str, path: str, **kwargs: Unpack[_RequestOptions]) -> JsonObject:
         with self._response(method,path,**kwargs) as response:
             return _decode(self._read(response,1024**2))
 
-    def upload_scene(self, spec_path):
+    def upload_scene(self, spec_path: PathInput) -> str:
         from ..prepare.local import load_spec, local_file
         spec, _, base = load_spec(Path(spec_path))
         spec = copy.deepcopy(spec)
         spec.pop('scene_id',None)
-        paths = {}
-        def add(value, suffix):
+        paths: dict[str,Path] = {}
+        def add(value: PathInput, suffix: str) -> str:
             path = local_file(value,base)
             name = 'file'+str(len(paths))+suffix
             paths[name] = path
@@ -76,15 +82,15 @@ class CloudClient(SceneClient):
             finally:
                 connection.close()
         self.json('POST','/v1/inputs/'+result['id']+'/complete',payload={})
-        return result['id']
+        return cast(str,result['id'])
 
-    def wait_input(self, identifier, timeout=300):
+    def wait_input(self, identifier: str, timeout: float = 300) -> JsonObject:
         return self._wait('/v1/inputs/'+identifier,'ready',timeout)
 
-    def wait_job(self, identifier, timeout=600):
+    def wait_job(self, identifier: str, timeout: float = 600) -> JsonObject:
         return self._wait('/v1/jobs/'+identifier,'completed',timeout)
 
-    def _wait(self,path,success,timeout):
+    def _wait(self, path: str, success: str, timeout: float) -> JsonObject:
         deadline = time.monotonic()+timeout
         while time.monotonic() < deadline:
             value = self.json('GET',path)
@@ -95,11 +101,11 @@ class CloudClient(SceneClient):
             time.sleep(.1)
         raise TimeoutError('Operation still pending; retain input/job ID and idempotency key')
 
-    def submit_input(self, identifier, profile, key):
+    def submit_input(self, identifier: str, profile: str, key: str) -> JsonObject:
         return self.json('POST','/v1/jobs',payload={'input_id':identifier,'model_id':MODEL,'profile_id':profile},key=key)
 
-    def download_job(self, identifier, output, *, expected_manifest_sha256, expected_qualification_sha256,
-                     expected_profile_id=None):
+    def download_job(self, identifier: str, output: PathInput, *, expected_manifest_sha256: str,
+                     expected_qualification_sha256: str, expected_profile_id: str | None = None) -> JsonObject:
         output = Path(output).absolute()
         _require(not output.exists() and output.parent.is_dir(),'Download directory must be new')
         listing = self.json('GET','/v1/jobs/'+identifier+'/artifacts')
@@ -151,7 +157,7 @@ class CloudClient(SceneClient):
         return receipt
 
 
-def main(argv=None):
+def main(argv: Sequence[str] | None = None) -> int | None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--url',required=True)
     credentials = parser.add_mutually_exclusive_group(required=True)
@@ -191,6 +197,7 @@ def main(argv=None):
     result = client.download_job(job['id'],args.output,expected_manifest_sha256=prepared['prepared_manifest_sha256'],
         expected_qualification_sha256=profile['qualification_sha256'])
     print(json.dumps({'job_id':job['id'],'download':str(args.output),'verified':result['hashes_verified']}))
+    return None
 
 
 if __name__=='__main__':

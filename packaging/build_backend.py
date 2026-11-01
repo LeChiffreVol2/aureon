@@ -10,15 +10,15 @@ import subprocess
 import sys
 import tempfile
 import build_review
+from core_profile import select_build_profile
 
 
 def _hook(name, destination, config_settings=None):
-    if config_settings:
-        raise ValueError("Build overrides are unsupported; use the reviewed configuration")
+    profile=select_build_profile(config_settings)
     destination = Path(destination).resolve()
     destination.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="aureon-allowlist-") as temp:
-        source, inventory = build_review.stage(Path(temp)/"candidate")
+        source, inventory = build_review.stage(Path(temp)/"candidate", profile=profile)
         env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", SOURCE_DATE_EPOCH=build_review.EPOCH)
         code = ("from setuptools import build_meta; import json,sys; "
                 "result=getattr(build_meta,sys.argv[1])(sys.argv[2]); "
@@ -36,10 +36,12 @@ def _hook(name, destination, config_settings=None):
 
 
 def get_requires_for_build_wheel(config_settings=None):
+    select_build_profile(config_settings)
     return []
 
 
 def get_requires_for_build_sdist(config_settings=None):
+    select_build_profile(config_settings)
     return []
 
 

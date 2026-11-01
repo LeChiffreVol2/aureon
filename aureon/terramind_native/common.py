@@ -1,4 +1,6 @@
 """Local immutable binding helpers. No model imports or network access."""
+from __future__ import annotations
+import typing as t
 import hashlib
 import json
 from pathlib import Path
@@ -9,15 +11,15 @@ MODEL_SHA = "83c3a0938067c83867a46e564443c2fa38383bf4f966d931b11cb025b847d7ec"
 TOKENIZER_SHA = "d83e43ccbdbfb787724d42a4e09dce6abb122e8f286889a379af59ffbe979ed1"
 
 
-def canonical(value):
+def canonical(value: object) -> bytes:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
 
 
-def digest(value):
+def digest(value: object) -> str:
     return hashlib.sha256(canonical(value)).hexdigest()
 
 
-def file_hash(path):
+def file_hash(path: str | Path) -> str:
     h = hashlib.sha256()
     with Path(path).open("rb") as stream:
         for block in iter(lambda: stream.read(1024**2), b""):
@@ -25,11 +27,11 @@ def file_hash(path):
     return h.hexdigest()
 
 
-def read_json(path):
+def read_json(path: str | Path) -> t.Any:
     path = Path(path)
     if not 0 < path.stat().st_size <= 2 * 1024**2:
         raise ValueError("JSON must be nonempty and at most 2 MiB")
-    def unique(pairs):
+    def unique(pairs: list[tuple[str,t.Any]]) -> dict[str,t.Any]:
         result = {}
         for k, v in pairs:
             if k in result: raise ValueError("Duplicate JSON key")
@@ -39,13 +41,13 @@ def read_json(path):
                       parse_constant=lambda x: (_ for _ in ()).throw(ValueError("Nonfinite JSON")))
 
 
-def write_json(path, value):
+def write_json(path: str | Path, value: object) -> None:
     with Path(path).open("x", encoding="utf-8") as stream:
         json.dump(value, stream, indent=2, sort_keys=True, allow_nan=False)
         stream.write("\n")
 
 
-def verify_file(item, base):
+def verify_file(item: dict[str,t.Any], base: str | Path) -> Path:
     if not isinstance(item, dict) or not re.fullmatch("[0-9a-f]{64}", item.get("sha256", "")):
         raise ValueError("A local file and its SHA-256 are required")
     name = item.get("path", "")
@@ -58,12 +60,12 @@ def verify_file(item, base):
     return path
 
 
-def binding(path):
+def binding(path: str | Path) -> dict[str,t.Any]:
     path = Path(path)
     return {"path": str(path.resolve()), "sha256": file_hash(path), "bytes": path.stat().st_size}
 
 
-def validate_recipe(recipe):
+def validate_recipe(recipe: t.Mapping[str,t.Any]) -> dict[str,t.Any]:
     if set(recipe) != {"token_steps", "diffusion_steps", "temperature", "top_p", "top_k", "seed"}:
         raise ValueError("Supply the exact explicit native sampling recipe")
     if type(recipe["token_steps"]) is not int or recipe["token_steps"] not in (1, 8):

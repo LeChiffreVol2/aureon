@@ -1,0 +1,196 @@
+"""Bounded generic group execution on the existing resident owner thread.
+
+One bounded group owns the existing session thread/process lock and model.
+Token sampling stays request-local. The public facade owns collection/admission.
+"""
+from __future__ import annotations
+from typing import TYPE_CHECKING, cast
+from collections.abc import Callable, Sequence
+from ..terramind_native._types import Metadata, PathInput, InputSnapshot
+if TYPE_CHECKING:
+    from ..terramind_native.denoiser_lanes import LaneRuntime
+from concurrent.futures import CancelledError
+from copy import deepcopy
+import threading
+from time import perf_counter
+import uuid
+
+from .generation_bridges import GenerationJob
+from .generation_queue import INPUT_BYTES, OUTPUT_BYTES
+from ..terramind_native.common import binding, write_json
+from ..terramind_native.session import (TerraMindSession, SessionBusy, SessionClosed,
+    SessionFailed, _PROCESS_OWNER, _identifier)
+from ..terramind_native.denoiser_batch import BatchIneligible, WORKSPACE_BYTES, compatible_group_recipes
+
+
+class GroupCredits:
+    """One active group; CPU input/result credits transfer at synchronous return.
+
+These credits bound engine-owned snapshots/results, not caller-retained arrays
+or neural activation memory. Cancellation releases the whole group's credits.
+"""
+    _active: int | bool
+
+    def __init__(self, max_input_bytes: int, max_output_bytes: int) -> None:
+        if (type(max_input_bytes) is not int or max_input_bytes < INPUT_BYTES
+                or type(max_output_bytes) is not int or max_output_bytes < OUTPUT_BYTES):
+            raise ValueError('Credits must admit at least one fixed-profile input/result')
+        self.capacity=min(max_input_bytes//INPUT_BYTES,max_output_bytes//OUTPUT_BYTES)
+        self._lock = threading.Lock()
+        self._active = False
+
+    def reserve(self,count: int) -> None:
+        if type(count) is not int or not 1<=count<=self.capacity:raise ValueError("Group exceeds input/result credits")
+        with self._lock:
+            if self._active: raise SessionBusy('One batch group already owns the input/result credits')
+            self._active = count
+
+    def release(self) -> None:
+        with self._lock:
+            if not self._active: raise RuntimeError('Group credits already released')
+            self._active = False
+
+    def metadata(self) -> Metadata:
+        with self._lock:
+            return {'active_groups': int(bool(self._active)), 'active_requests':int(self._active), 'input_bytes_reserved': int(self._active)*INPUT_BYTES,
+                    'output_bytes_reserved': int(self._active)*OUTPUT_BYTES,
+                    'retention': 'ownership transfers to caller at synchronous return'}
+
+
+class NativeGroupSession(TerraMindSession):
+    """B1 methods remain inherited; generate_group selects generic B1 graph lanes under external admission.
+
+Cancellation is group-wide at CPU stage boundaries. It never interrupts an active
+CUDA kernel. Results preserve input order and own separate CPU storage. Unsupported
+cases reject rather than silently changing the route; use inherited generate for
+the unchanged B1 reference/recommended path.
+"""
+    def __init__(self, config: PathInput, work: PathInput, *, execute_model: bool=False, allow_unqualified_batch: bool=False,
+                 reuse: str='auto', max_lanes: int=2, max_input_bytes: int=2*INPUT_BYTES, max_output_bytes: int=2*OUTPUT_BYTES,
+                 max_workspace_bytes: int=64*1024**2, min_free_cuda_bytes: int=512*1024**2) -> None:
+        if allow_unqualified_batch is not True:
+            raise ValueError('Pass allow_unqualified_batch=True for this unqualified source candidate')
+        if type(max_lanes) is not int or max_lanes<1:raise ValueError('max_lanes must be positive')
+        self.max_lanes=max_lanes
+        self._group_credits = GroupCredits(max_input_bytes, max_output_bytes)
+        if type(max_workspace_bytes) is not int or max_workspace_bytes < WORKSPACE_BYTES:
+            raise ValueError('Insufficient explicit denoiser tensor workspace budget')
+        if type(min_free_cuda_bytes) is not int or min_free_cuda_bytes < 0:
+            raise ValueError('min_free_cuda_bytes must be nonnegative')
+        self._group_workspace = max_workspace_bytes
+        self._group_free = min_free_cuda_bytes
+        # Inherited B1 entry points keep their original execution selection.
+        super().__init__(config, work, execute_model=execute_model, reuse=reuse)
+
+    def metadata(self) -> Metadata:
+        return {**super().metadata(), 'batch_candidate': {'max_neural_batch_size': 1,'max_lanes':self.max_lanes,
+                'stage': 'independent_B1_graph_lanes', 'graph': True, 'qualified': False,
+                'credits': self._group_credits.metadata()}}
+
+    def _runtime_factory(self) -> LaneRuntime:
+        from ..terramind_native.denoiser_lanes import LaneRuntime
+        return LaneRuntime(max_lanes=self.max_lanes)
+
+    def _group_admission(self, recipes: list[Metadata]) -> Metadata:
+        from ..terramind_native.denoiser_lanes import lane_eligibility as eligibility
+        return eligibility(cast("LaneRuntime", self._runtime), recipes, max_workspace_bytes=self._group_workspace,
+                           min_free_cuda_bytes=self._group_free)
+
+    def _execute_group(self, snapshots: list[InputSnapshot], recipes: list[Metadata], ids: list[tuple[str, str]], cancel: Callable[[], None], admission: Metadata) -> list[Metadata]:
+        from ..terramind_native.denoiser_lanes import run_lane_pair
+        return run_lane_pair(cast("LaneRuntime", self._runtime), snapshots, recipes, ids, reuse=self._reuse, cancel=cancel,
+            session_identity=self._identity, max_workspace_bytes=self._group_workspace,
+            min_free_cuda_bytes=self._group_free, admission=admission)
+
+    def generate_group(self, jobs: Sequence[GenerationJob], *, cancel_event: threading.Event | None=None) -> list[Metadata]:
+        if not isinstance(jobs, (tuple, list)) or not 1 <= len(jobs) <= self.max_lanes or not all(isinstance(j, GenerationJob) for j in jobs):
+            raise TypeError('Supply a finite list/tuple of one or more GenerationJob objects within max_lanes')
+        if any(j.execution_profile is not None for j in jobs):
+            raise BatchIneligible('Group owns its eager experimental profile; omit B1 execution profiles')
+        if cancel_event is not None and not isinstance(cancel_event, threading.Event):
+            raise TypeError('cancel_event must be threading.Event or None')
+        recipes = compatible_group_recipes([j.recipe.native() for j in jobs])
+        ids = [(_identifier(j.job_id or uuid.uuid4().hex, 'job_id'), _identifier(j.attempt_id, 'attempt_id')) for j in jobs]
+        if len(set(ids)) != len(ids): raise ValueError('Group job/attempt identifiers must be distinct')
+        def cancel() -> None:
+            if cancel_event is not None and cancel_event.is_set():
+                raise CancelledError('Group cancelled at a safe stage boundary; no partial result delivered')
+        if not self._gate.acquire(blocking=False): raise SessionBusy('The session already owns an active call')
+        reserved = False
+        try:
+            if self._state in ('failed', 'closed'): raise SessionClosed('Session is terminal')
+            if any(identity in self._attempts for identity in ids): raise FileExistsError('Group attempt already admitted')
+            cancel()
+            self._group_credits.reserve(len(jobs)); reserved = True
+            snapshots = [j.input_data.snapshot() for j in jobs]
+            return self._executor.submit(self._group_owned, snapshots, recipes, ids, cancel).result()
+        finally:
+            if reserved: self._group_credits.release()
+            self._gate.release()
+
+    def _group_owned(self, snapshots: list[InputSnapshot], recipes: list[Metadata], ids: list[tuple[str, str]], cancel: Callable[[], None]) -> list[Metadata]:
+        self._owner_thread = threading.get_ident()
+        if binding(self._config_path) != self._config_identity: raise ValueError('Session config changed')
+        cancel()
+        outputs = [self.work/'jobs'/job/attempt for job, attempt in ids]
+        for output in outputs:
+            if any(p.is_symlink() for p in (self.work, self.work/'jobs', output.parent, output)):
+                raise ValueError('Output paths cannot contain symlinks')
+            if output.exists(): raise FileExistsError(output)
+        if not self._owns_process:
+            if not _PROCESS_OWNER.acquire(blocking=False): raise SessionBusy('Another session owns the process')
+            self._owns_process = True
+        try:
+            if cast("LaneRuntime", self._runtime) is None:
+                self._load_attempts += 1
+                self._runtime = self._runtime_factory()
+                self._runtime.core_identity = self._core_identity
+                self._runtime.load(self._config_path, self.work)
+                self._loads += 1
+            cancel()
+            # Admission happens before creating job evidence or consuming attempts.
+            admission = self._group_admission(recipes)
+            for output in outputs:
+                output.parent.mkdir(exist_ok=True); output.mkdir(exist_ok=False)
+            self._attempts.update(ids)
+            self._state = 'running'
+            start = perf_counter()
+            results = self._execute_group(snapshots, recipes, ids, cancel, admission)
+            if len(results)!=len(snapshots):raise RuntimeError('Group result count differs')
+            commit = self.work/('batch-' + uuid.uuid4().hex + '.json')
+            for result, output in zip(results, outputs):
+                result['group_complete_seconds'] = perf_counter() - start
+                result['model_load_count'] = self._loads
+                result['owner_thread_id'] = self._owner_thread
+                write_json(output/'receipt.json', {**{k:v for k,v in result.items() if k not in ('array','valid_mask')},
+                    'status':'prepared', 'requires_group_commit':commit.name})
+            # A per-job prepared receipt alone is never a successful group. This
+            # final record binds both identities; no fsync/durable-service claim.
+            write_json(commit, {'status':'completed', 'jobs':[binding(p/'receipt.json') for p in outputs],
+                                'scope':'local synchronous memory delivery; not a durable service transaction'})
+            for result in results: result['group_commit'] = binding(commit)
+            self._completed += len(results); self._state = 'ready'
+            return [deepcopy(result) for result in results]
+        except (CancelledError, BatchIneligible) as exc:
+            if isinstance(exc,BatchIneligible) and self._state=='running':
+                self._state='failed';self._close_owned()
+                raise SessionFailed('Admission exception after execution began; no retry') from None
+            from ..terramind_native.harness import capture_failure
+            message = capture_failure(exc)
+            for output in outputs:
+                if output.exists() and not (output/'receipt.json').exists():
+                    write_json(output/'cancelled.json', {'status': 'cancelled', 'reason': message,
+                                                       'partial_result_delivered': False})
+            self._state = 'ready' if cast("LaneRuntime", self._runtime) is not None else 'new'
+            raise type(exc)(str(exc)) from None
+        except BaseException as exc:
+            from ..terramind_native.harness import capture_failure
+            error = capture_failure(exc)
+            self._state = 'failed'
+            try:
+                for output in outputs:
+                    if output.exists() and not (output/'receipt.json').exists():
+                        write_json(output/'failure.json', {'status': 'failed', 'error': error})
+            finally:
+                self._close_owned()
+            raise SessionFailed('Batch candidate failed; session terminated. ' + error) from None

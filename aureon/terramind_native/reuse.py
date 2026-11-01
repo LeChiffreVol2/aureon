@@ -1,4 +1,10 @@
 """Request-local exact encoder reuse, without modifying upstream files/classes."""
+from __future__ import annotations
+from typing import Any, TYPE_CHECKING, cast
+from collections.abc import Iterator
+from ._types import TerraMindModel, Metadata
+if TYPE_CHECKING:
+    from torch import Tensor
 from contextlib import contextmanager
 import types
 
@@ -6,7 +12,7 @@ _MISSING = object()
 
 
 @contextmanager
-def exact_conditioning_reuse(model, *, enabled):
+def exact_conditioning_reuse(model: TerraMindModel, *, enabled: bool) -> Iterator[Metadata]:
     import torch
     if torch.is_inference_mode_enabled():
         raise RuntimeError("Use torch.no_grad(), not inference_mode, for version-checked encoder reuse")
@@ -20,10 +26,10 @@ def exact_conditioning_reuse(model, *, enabled):
     receipt["eligible"] = eligible
     old_attribute = core.__dict__.get("forward_encoder", _MISSING)
     original = core.forward_encoder
-    cache = {}
+    cache: Metadata = {}
     versions = tuple(p._version for p in core.parameters())
 
-    def forward(this, x, mask):
+    def forward(this: Any, x: Tensor, mask: Tensor) -> Tensor:
         # Exact values and masks are checked on every hit, including device/dtype.
         # No approximation, changed-conditioning reuse or cross-request cache.
         safe = eligible and not this.training and not torch.is_grad_enabled()
@@ -33,11 +39,11 @@ def exact_conditioning_reuse(model, *, enabled):
                        and torch.equal(a, b) for a,b in ((x, cache["x"]), (mask, cache["mask"])))
             if same and cache["value"]._version == cache["version"]:
                 receipt["cache_hits"] += 1
-                return cache["value"]
+                return cast("Tensor", cache["value"])
             receipt["fallbacks"] += 1
             cache.clear()
         receipt["encoder_calls"] += 1
-        value = original(x, mask)
+        value: Tensor = original(x, mask)
         if safe:
             cache.update(x=x.clone(), mask=mask.clone(), value=value, version=value._version)
         return value

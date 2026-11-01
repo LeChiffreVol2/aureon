@@ -1,4 +1,8 @@
 """Small local job facade; delegates numerical work to the existing Engine."""
+from __future__ import annotations
+import typing as t
+if t.TYPE_CHECKING:
+    from ..cloud.contracts import QualificationBinding
 from dataclasses import dataclass
 import hashlib
 from importlib import metadata
@@ -25,11 +29,11 @@ class SceneRequest:
     environment: str = "scene"
     qualification: str | Path | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.model_id not in MODELS or self.profile_id not in PROFILES:
             raise ValueError("Choose a declared KAO-TerraMind model and execution profile")
         if self.environment not in ("scene", "scene-legacy"):
-            raise ValueError("Scene jobs use scene or scene-legacy; vllm is a separate adapter environment")
+            raise ValueError("Scene jobs require the scene or scene-legacy environment")
         if self.profile_id != PROFILES[0]:
             if self.model_id != "kao-terramind-b" or self.environment != "scene" or self.qualification is None:
                 raise ValueError("Guarded v2/v3 require KAO-TerraMind B, the scene environment and an explicit qualification JSON")
@@ -49,7 +53,7 @@ class SceneResult:
     receipt: Path
 
 
-def _json(path):
+def _json(path: str | Path) -> t.Any:
     with Path(path).open("rb") as stream:
         raw = stream.read(4*1024**2+1)
     if len(raw) > 4*1024**2:
@@ -57,18 +61,18 @@ def _json(path):
     return json.loads(raw)
 
 
-def _write(path, value):
+def _write(path: Path, value: object) -> None:
     with path.open("x", encoding="utf-8") as stream:
         json.dump(value, stream, indent=2, sort_keys=True, allow_nan=False)
         stream.write("\n")
 
 
-def _hash(path):
+def _hash(path: str | Path) -> str:
     with Path(path).open("rb") as stream:
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
-def run_scene(request: SceneRequest, *, execute_model=False) -> SceneResult:
+def run_scene(request: SceneRequest, *, execute_model: bool=False) -> SceneResult:
     """Run one bounded scene, close its worker, then commit the facade receipt.
 
     No retry or acquisition. Output must be fresh; failures retain diagnostics
@@ -98,13 +102,13 @@ def run_scene(request: SceneRequest, *, execute_model=False) -> SceneResult:
     else:
         from ..cloud.profiles import engine_for
         engine = engine_for(request.profile_id)
-        record = _json(request.qualification)
+        record = _json(t.cast("str | Path", request.qualification))
         if record.get("profile_id") != request.profile_id or record.get("model_id") != request.model_id:
             raise ValueError("Qualification model/profile differs from the request")
         engine.verify_qualification(record)
         canonical = json.dumps(record,sort_keys=True,separators=(",",":"),allow_nan=False).encode()
         qualification = {"record":record,"sha256":hashlib.sha256(canonical).hexdigest()}
-        executor = engine.ResidentExecutor(bundle,output,qualification,execute_model=True)
+        executor = engine.ResidentExecutor(bundle,output,t.cast("QualificationBinding", qualification),execute_model=True)
         try:
             paths = executor.execute(manifest,uuid.uuid4().hex)
         except BaseException:

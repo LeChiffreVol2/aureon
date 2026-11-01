@@ -1,12 +1,3 @@
-# AUREON review candidate - adaptation and modification notice.
-# Learned pyramid layout and forward ordering adapted from TerraTorch commit
-# 948b5535092f847e1ddc90e3f7ef7a67094725c0 (Apache-2.0).
-# AUREON changes: validated lazy subclass/registration and delegation to the
-# externally installed UPerNet core. The upstream decoder credits MMSegmentation.
-# Migration reference: TerraTorch 89a3ed13d7a6272c009c4c5fbabf62461fcfb16c;
-# Copyright contributors to the Terratorch project (migration-test attribution).
-# See NOTICE and THIRD-PARTY-NOTICES.md for sources and license copies.
-
 """Explicit reference for the original KAO-TerraMind decoder checkpoint layout.
 
 The scale-module layout and forward order follow TerraTorch at commit
@@ -15,6 +6,14 @@ by the installed TerraTorch; the learned pyramid stays inside this decoder,
 so the original checkpoint loads with no state-key rewrites. Imports are lazy.
 This is a parity reference, not a serving architecture or a speed claim.
 """
+
+from __future__ import annotations
+from typing import TYPE_CHECKING, cast
+from .value_types import JsonObject, Pathish
+
+if TYPE_CHECKING:
+    from torch import Tensor
+    from torch.nn import Module
 from collections.abc import Mapping
 from copy import deepcopy
 from functools import lru_cache
@@ -37,7 +36,7 @@ LEGACY_DECODER_NAME = 'AureonLegacyUperNetDecoder'
 
 
 @lru_cache(maxsize=1)
-def legacy_decoder_class():
+def legacy_decoder_class() -> type[Module]:
     """Register the original learned pyramid under a separate decoder name.
 
     No existing registry entry is replaced. The parent UPerNet implementation
@@ -48,9 +47,9 @@ def legacy_decoder_class():
     from terratorch.models.decoders.upernet_decoder import UperNetDecoder
     from terratorch.registry import TERRATORCH_DECODER_REGISTRY
 
-    class AureonLegacyUperNetDecoder(UperNetDecoder):
-        def __init__(self, embed_dim, pool_scales=(1, 2, 3, 6), channels=256,
-                     align_corners=True, scale_modules=True):
+    class AureonLegacyUperNetDecoder(UperNetDecoder):  # type: ignore[misc]  # Upstream TerraTorch decoder has no typing marker.
+        def __init__(self, embed_dim: list[int] | tuple[int, ...], pool_scales: tuple[int, ...]=(1, 2, 3, 6), channels: int=256,
+                     align_corners: bool=True, scale_modules: bool=True) -> None:
             if type(scale_modules) is not bool or not scale_modules:
                 raise ValueError('The legacy KAO-TerraMind reference requires scale_modules=True.')
             if (not isinstance(embed_dim, (list, tuple)) or len(embed_dim) != 4
@@ -75,12 +74,12 @@ def legacy_decoder_class():
             self.fpn3 = nn.Sequential(nn.Identity())
             self.fpn4 = nn.Sequential(nn.MaxPool2d(kernel_size=2, stride=2))
 
-        def forward(self, inputs):
+        def forward(self, inputs: list[Tensor]) -> Tensor:
             if len(inputs) != 4:
                 raise ValueError('Legacy KAO-TerraMind decoder requires four feature maps.')
             scaled_inputs = [self.fpn1(inputs[0]), self.fpn2(inputs[1]),
                              self.fpn3(inputs[2]), self.fpn4(inputs[3])]
-            return super().forward(scaled_inputs)
+            return cast("Tensor", super().forward(scaled_inputs))
 
     if LEGACY_DECODER_NAME in TERRATORCH_DECODER_REGISTRY:
         raise RuntimeError('The AUREON legacy decoder registry name is already occupied.')
@@ -88,7 +87,7 @@ def legacy_decoder_class():
     return AureonLegacyUperNetDecoder
 
 
-def _reference_model_args(source_args):
+def _reference_model_args(source_args: object) -> JsonObject:
     """Admit the original pinned architecture; keep its two original necks."""
     if type(source_args) is not dict:
         raise ValueError('Original checkpoint must contain a plain model_args dict.')
@@ -124,7 +123,7 @@ class LegacyPyTorchPredictor(PyTorchPredictor):
     """
     execution_backend = 'pytorch_legacy_checkpoint_reference'
 
-    def __init__(self, checkpoint_path, model_id, *, device='cuda', dtype='float32'):
+    def __init__(self, checkpoint_path: Pathish, model_id: str, *, device: str='cuda', dtype: str='float32') -> None:
         if not isinstance(device, str) or dtype not in ('float32', 'float16'):
             raise ValueError('Explicit cpu/cuda device and float32/float16 precision are required.')
         row = next((m for m in get_catalog()['models'] if m['id'] == model_id), None)
@@ -165,7 +164,7 @@ class LegacyPyTorchPredictor(PyTorchPredictor):
             raise ValueError('Original state_dict must be a nonempty mapping of plain dense tensors.')
         legacy_decoder_class()
         from terratorch.models import EncoderDecoderFactory
-        model = EncoderDecoderFactory().build_model('segmentation', **args)
+        model = cast("Module", EncoderDecoderFactory().build_model('segmentation', **args))
         if set(model.state_dict()) != set(state):
             raise ValueError('Original state keys do not exactly match the unmigrated reference model.')
         loaded = model.load_state_dict(state, strict=True)

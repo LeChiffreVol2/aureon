@@ -3,6 +3,9 @@
 Published metadata is not local checkpoint verification. Nothing in this module
 downloads weights, imports a neural runtime, reads projects, or dispatches jobs.
 """
+
+from __future__ import annotations
+from .value_types import JsonObject
 from copy import deepcopy
 import hashlib
 import json
@@ -14,8 +17,6 @@ CLASS_NAMES = ('Maize', 'Sugarcane', 'Cassava', 'Rice', 'Other Crops', 'Water',
 RECIPE_ID = 'aureon-landcover-v1'
 UPSTREAM_REVISION = '2d8a9c8953e9bfbec01fae4d80ce5ffcba67c777'
 UPSTREAM_URL = 'https://github.com/kaopanboonyuen/KAO-TerraMind/tree/' + UPSTREAM_REVISION
-TERRATORCH_VLLM_URL = 'https://torchgeo.org/terratorch/stable/guide/vllm/intro/'
-TERRATORCH_VLLM_CONFIG_URL = 'https://torchgeo.org/terratorch/stable/guide/vllm/prepare_your_model/'
 NORMALIZATION_SOURCE_URL = 'https://huggingface.co/kaopanboonyuen/KAO-TerraMind-C/blob/4e7252d3c83b3e877744da214005184a4133883f/kao_terramind_inference.py'
 
 _RECIPE_CONFIG = {
@@ -94,7 +95,7 @@ _RECIPE = {
     'checkpoint_parity': 'not_verified',
     'quality_evaluation': 'not_evaluated',
     'improvement_claim': False,
-    'intended_backend': 'vllm',
+    'intended_backend': 'pytorch',
     'description': 'Draft AUREON tiling and delivery recipe. Synthetic recipe checks do not establish checkpoint parity or task quality.',
 }
 
@@ -108,7 +109,7 @@ _VARIANTS = (
 )
 
 
-def _candidate(letter, revision, digest, size, miou):
+def _candidate(letter: str, revision: str, digest: str, size: int, miou: float) -> JsonObject:
     name = 'KAO-TerraMind-' + letter.upper()
     repo_id = 'kaopanboonyuen/' + name
     url = 'https://huggingface.co/' + repo_id
@@ -140,7 +141,7 @@ def _candidate(letter, revision, digest, size, miou):
             'auto_map_present': False,
         },
         'recipe_ids': [RECIPE_ID],
-        'backend': 'vllm',
+        'backend': 'pytorch',
         'author_reported_metrics': {
             'miou_percent': miou,
             'reference_supervised_base_miou_percent': 40.82,
@@ -162,30 +163,6 @@ def _candidate(letter, revision, digest, size, miou):
 _MODELS = [_candidate(*variant) for variant in _VARIANTS]
 
 _BACKENDS = [
-    {
-        'id': 'vllm',
-        'name': 'vLLM through TerraTorch',
-        'recommended': False,
-        'recommended_for': ['kao-terramind-a', 'kao-terramind-c'],
-        'status': 'supported_integration_kao_validation_required',
-        'description': 'Official TerraTorch integration supports semantic segmentation. Prepare the KAO-TerraMind checkpoint/config bundle, then validate tensor-to-tensor serving with AUREON preprocessing and stitching.',
-        'model_implementation': 'terratorch',
-        'mode': 'tensor-to-tensor',
-        'serving_endpoint': '/pooling',
-        'io_processor_plugin': None,
-        'input_modality': 'S2L2A',
-        'input_transport': 'image_embeds',
-        'config_contract': {
-            'architectures': ['Terratorch'],
-            'num_classes': 0,
-            'pretrained_cfg_required': ['input', 'model'],
-            'segmentation_classes_location': 'pretrained_cfg.model.init_args.model_args.num_classes',
-            'auto_map_required': False,
-        },
-        'io_processor_note': 'The documented built-in TerraMind segmentation example uses an ImpactMesh multimodal pipeline. Do not apply it blindly to a KAO-TerraMind S2-only checkpoint; an AUREON IO processor is optional future integration.',
-        'source_url': TERRATORCH_VLLM_URL,
-        'configuration_source_url': TERRATORCH_VLLM_CONFIG_URL,
-    },
     {
         'id': 'pytorch',
         'name': 'PyTorch / TerraTorch',
@@ -215,19 +192,19 @@ _BLOCKERS = [
     },
     {
         'code': 'live_service_not_verified',
-        'detail': 'Explicit inference is available through python -m aureon infer after bundle preparation and manual service startup. This offline plan does not probe a service or establish its readiness.',
+        'detail': 'Use aureon-engine run for the supported local workflow after bundle preparation. This offline plan does not probe a service or establish its readiness.',
     },
 ]
 
 
-def default_backend(model_id):
-    return 'pytorch' if model_id == 'kao-terramind-b' else 'vllm'
+def default_backend(model_id: str) -> str:
+    return 'pytorch'
 
 
 _DEFAULT_BACKEND = object()
 
 
-def get_catalog():
+def get_catalog() -> JsonObject:
     """Return independent JSON-serializable metadata; perform no I/O or execution."""
     return deepcopy({
         'schema': 'aureon.inference_catalog.v1',
@@ -240,12 +217,12 @@ def get_catalog():
         'primary_model': 'kao-terramind-b',
         'recommended_backend': 'pytorch',
         'recommended_backend_by_model': {m['id']: default_backend(m['id']) for m in _MODELS},
-        'primary_service': {'command': 'python -m aureon serve-model', 'model_id': 'kao-terramind-b',
+        'primary_service': {'command': 'aureon-service', 'model_id': 'kao-terramind-b',
                             'backend': 'pytorch', 'precision': 'highest_fp32', 'explicit_start_required': True},
     })
 
 
-def plan_inference(model_id, recipe_id=RECIPE_ID, backend=_DEFAULT_BACKEND):
+def plan_inference(model_id: str, recipe_id: str=RECIPE_ID, backend: object=_DEFAULT_BACKEND) -> JsonObject:
     """Describe a candidate request without accepting or running an inference job."""
     if not isinstance(model_id, str) or model_id not in {m['id'] for m in _MODELS}:
         raise ValueError('Unknown model ID.')
@@ -253,27 +230,10 @@ def plan_inference(model_id, recipe_id=RECIPE_ID, backend=_DEFAULT_BACKEND):
         raise ValueError('Unknown recipe ID.')
     if backend is _DEFAULT_BACKEND:
         backend = default_backend(model_id)
-    if not isinstance(backend, str) or backend not in {'pytorch', 'vllm'}:
-        raise ValueError('Unknown backend. Choose pytorch or vllm.')
+    if not isinstance(backend, str) or backend != 'pytorch':
+        raise ValueError('Unknown backend. Choose pytorch.')
     model = next(model for model in _MODELS if model['id'] == model_id)
     blockers = deepcopy(_BLOCKERS)
-    if backend == 'vllm':
-        blockers.extend([
-            {
-                'code': 'vllm_kao_bundle_unverified',
-                'detail': 'Create a TerraTorch serving config and weights bundle from the actual pinned checkpoint model_args/state_dict. The published descriptive KAO-TerraMind config is not this serving bundle.',
-                'source_url': TERRATORCH_VLLM_CONFIG_URL,
-            },
-            {
-                'code': 'vllm_runtime_and_parity_unverified',
-                'detail': 'Validate a compatible pinned vLLM/TerraTorch runtime and compare tensor-to-tensor outputs with the direct PyTorch reference. Installed plugin source alone does not establish a running vLLM service.',
-                'source_url': TERRATORCH_VLLM_URL,
-            },
-            {
-                'code': 'acceleration_not_measured',
-                'detail': 'Measure warm-model latency, throughput and memory against a same-precision baseline before claiming a speedup. FP16 is a separate numerical-parity candidate.',
-            },
-        ])
     return deepcopy({
         'schema': 'aureon.inference_plan.v1',
         'model_id': model_id,
@@ -284,9 +244,9 @@ def plan_inference(model_id, recipe_id=RECIPE_ID, backend=_DEFAULT_BACKEND):
         'backend': backend,
         'backend_status': next(row['status'] for row in _BACKENDS if row['id'] == backend),
         'serving': {
-            'mode': 'tensor-to-tensor' if backend == 'vllm' else 'direct_reference',
+            'mode': 'direct_reference',
             'model_implementation': 'terratorch',
-            'endpoint': '/pooling' if backend == 'vllm' else None,
+            'endpoint': None,
             'io_processor_plugin': None,
             'input_modality': 'S2L2A',
             'preprocessing_owner': 'AUREON versioned recipe',

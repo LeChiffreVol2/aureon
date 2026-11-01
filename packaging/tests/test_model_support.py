@@ -35,7 +35,7 @@ for args in (['--help'],['generate','--help'],['generation-config','--help']):
     def test_registry_detached_and_honest(self):
         a = list_models(); a[0]["outputs"].clear()
         self.assertTrue(list_models()[0]["outputs"])
-        self.assertEqual(len(a), 4)
+        self.assertEqual(len(a), 15)
         self.assertFalse(inspect_model("kao-terramind-a")["resident"])
         self.assertTrue(inspect_model("terramind-v1-base")["synthetic"])
         with self.assertRaises(ValueError): inspect_model("terramind-large")
@@ -85,12 +85,14 @@ for args in (['--help'],['generate','--help'],['generation-config','--help']):
             session.run.assert_called_once_with(None, job_id="j", attempt_id="first", recipe=None)
 
     def test_generation_delegates_exact_session(self):
-        with patch.object(models, "require_profile"), patch.object(offline, "inspect_config") as check, \
-                patch("aureon.terramind_native.TerraMindSession") as native:
+        value = {"schema":"aureon.terramind_native.v1", "model":{}, "tokenizer":{},
+                 "source_manifest":{}, "dependencies":{}, "input_manifest":{}, "recipe":{}}
+        with patch("aureon.terramind_native.common.read_json", return_value=value), \
+                patch.object(offline, "inspect_config", side_effect=AssertionError("extra asset hashing")), \
+                patch("aureon.api.best.BestTerraMindSession") as selected:
             result = open_model_session("terramind-v1-base", config="c", work="w", denoiser="graph", execute_model=True)
-            check.assert_called_once_with("c")
-            native.assert_called_once_with(config="c", work="w", denoiser="graph", execute_model=True)
-            self.assertIs(result, native.return_value)
+            selected.assert_called_once_with("c", "w", execute_model=True, profile="best_fp32")
+            self.assertIs(result, selected.return_value)
 
     def test_offline_config_relative_and_no_overwrite(self):
         with tempfile.TemporaryDirectory() as temp:

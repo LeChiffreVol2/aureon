@@ -1,9 +1,11 @@
 """Run explicit prepared scenes through one public resident EngineSession."""
+from __future__ import annotations
+from collections.abc import Sequence
 import argparse
 import json
 
 
-def main(argv=None):
+def main(argv: Sequence[str] | None=None) -> None:
     parser = argparse.ArgumentParser(description="Resident KAO-TerraMind B EngineSession example")
     parser.add_argument("--bundle", required=True)
     parser.add_argument("--work", required=True)

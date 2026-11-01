@@ -1,4 +1,6 @@
 """Dependency profiles are metadata contracts, separate from execution profiles."""
+from __future__ import annotations
+import typing as t
 from importlib import metadata
 import platform
 import sys
@@ -8,8 +10,6 @@ PROFILES = {
               "terratorch":"1.2.13", "torchgeo":"0.9.0", "rasterio":"1.5.2"},
     "scene-legacy": {"numpy":"2.2.6", "torch":"2.10.0", "torchvision":"0.25.0",
                      "terratorch":"1.2.13", "torchgeo":"0.9.0", "rasterio":"1.5.2"},
-    "vllm": {"numpy":"2.2.6", "torch":"2.10.0", "torchvision":"0.25.0",
-             "terratorch":"1.2.13", "rasterio":"1.5.2", "vllm":"0.19.0"},
     "generation": {"numpy":"2.2.6", "torch":"2.10.0", "torchvision":"0.25.0",
                    "terratorch":"1.2.13", "rasterio":"1.5.2", "diffusers":"0.39.0",
                    "einops":"0.8.2", "huggingface-hub":"0.36.2", "timm":"1.0.30",
@@ -21,7 +21,7 @@ class ProfileError(ValueError):
     """Unsupported profile or mismatched exact dependency pins."""
 
 
-def inspect_profile(name):
+def inspect_profile(name: str) -> t.Dict[str, t.Any]:
     if name not in PROFILES:
         raise ProfileError("Choose exactly one environment: " + ", ".join(PROFILES) + "; use separate environments")
     checks = [{"name":"python", "actual":platform.python_version(), "required":"3.12.x",
@@ -34,13 +34,23 @@ def inspect_profile(name):
             actual = None
         checks.append({"name":package,"actual":actual,"required":expected,
                        "passed":actual is not None and actual.split("+")[0] == expected})
+    if name == "scene":
+        remedy = ("Create a separate Python 3.12 Linux environment with the original GitHub v0.1.0 "
+                  "wheel (SHA256 a11b67e859ce0e2e89277bf5e35e1b8d917bfa0aa577617bf9e66d8860c2c1bf) "
+                  "and its scene lock. The revised generation candidate cannot satisfy this profile. "
+                  "See packaging/LOCKED-INSTALL.md; do not combine scene and generation dependencies.")
+    else:
+        requirement = "aureon-inference" if name == "generation" else f"aureon-inference[{name}]"
+        remedy = (f"Create a separate Python 3.12 Linux environment and install {requirement} "
+                  "from the reviewed generation candidate with its matching constraints. "
+                  "Do not combine it with the original scene dependency stack.")
     return {"schema":"aureon.environment_profile.v1", "profile":name,
             "status":"passed" if all(c["passed"] for c in checks) else "failed", "checks":checks,
-            "remedy":f"Create a separate Python 3.12 Linux environment and install aureon-inference[{name}] with its matching constraints. Do not combine scene with scene-legacy, vllm or generation.",
+            "remedy":remedy,
             "cuda":"not_probed", "model_imported":False, "fresh_resolution_proven":False}
 
 
-def require_profile(name):
+def require_profile(name: str) -> t.Dict[str, t.Any]:
     result = inspect_profile(name)
     if result["status"] != "passed":
         failures = ", ".join(f"{c['name']}={c['actual']} (need {c['required']})" for c in result["checks"] if not c["passed"])

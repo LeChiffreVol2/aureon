@@ -4,6 +4,16 @@ No model imports at module import. Every job retains eager numerical validation
 and the existing scene-job evidence format. Model/code hashes move to startup
 and shutdown, with pinned snapshots and cheap fail-closed lifecycle guards.
 """
+from __future__ import annotations
+from collections.abc import Callable
+from typing import TYPE_CHECKING, TypeVar, cast
+from ..serving.contracts import CudaProcess, PathInput
+from .contracts import ArtifactDeclaration, CompletedReceipt
+R = TypeVar('R')
+if TYPE_CHECKING:
+    from ..reference import PyTorchPredictor
+    from ..scene_pipeline.stream_io import WindowSource
+    from ..scene_pipeline.georaster import GeoRasterInput
 from copy import deepcopy
 from datetime import datetime, timezone
 from importlib import metadata as packages
@@ -32,11 +42,11 @@ from ..scene_pipeline.georaster import write_segmentation_geotiffs
 from .identity import FileSeal, TensorSeal, WorkerIntegrityError
 
 
-def utc_now():
+def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def source_hashes():
+def source_hashes() -> dict[str, str]:
     hashes = _sources()
     hashes['aureon/bundle_storage.py'] = file_hash(ROOT/'aureon/bundle_storage.py')
     hashes.update({p.relative_to(ROOT).as_posix(): file_hash(p)
@@ -44,7 +54,7 @@ def source_hashes():
     return hashes
 
 
-def _prime_model_imports():
+def _prime_model_imports() -> None:
     # Import hooks can retain the frame that first imports TerraTorch. Import
     # before the predictor constructor owns model tensors, so that such a
     # retained frame cannot keep the model/CUDA allocation alive at shutdown.
@@ -52,8 +62,10 @@ def _prime_model_imports():
 
 
 class ResidentSceneWorker:
-    def __init__(self, bundle_dir, scenes, evidence_dir, *, execute_model=False,
-                 hourly_rate=1.0, currency='THB', streaming=False, model_id='kao-terramind-b'):
+    tensor_seal: TensorSeal | None
+
+    def __init__(self, bundle_dir: PathInput, scenes: dict[str, PathInput], evidence_dir: PathInput, *, execute_model: bool = False,
+                 hourly_rate: float = 1.0, currency: str = 'THB', streaming: bool = False, model_id: str = 'kao-terramind-b') -> None:
         if execute_model is not True or sys.platform != 'linux':
             raise ValueError('Explicit model execution in the isolated Linux runtime is required')
         cost_report(0, 0, 0, 0, hourly_rate=hourly_rate, currency=currency)
@@ -117,6 +129,7 @@ class ResidentSceneWorker:
             loaded_identity_seconds = perf_counter()-start
             self.eager = SequentialEagerAdapter(self.reference)
             start = perf_counter()
+            source: WindowSource | GeoRasterInput
             first_path, _ = next(iter(self.scenes.values()))
             if self.streaming:
                 from ..scene_pipeline.stream_io import WindowSource
@@ -203,20 +216,20 @@ class ResidentSceneWorker:
                 pass  # Preserve the primary failure even if the evidence volume is full.
             raise
 
-    def _manifest(self,path):
+    def _manifest(self, path: PathInput) -> tuple[dict[str, object], dict[str, Path], str]:
         return load_manifest(path,max_evidence_bytes=2*1024**3) if self.streaming else load_manifest(path)
 
-    def _configure_precision(self):
+    def _configure_precision(self) -> None:
         self.torch.set_float32_matmul_precision('highest')
         self.torch.backends.cuda.matmul.allow_tf32 = False
         self.torch.backends.cudnn.allow_tf32 = False
         self.torch.backends.cuda.enable_cudnn_sdp(False)
         self.torch.backends.cudnn.benchmark = False
 
-    def _attest_loaded_model(self):
+    def _attest_loaded_model(self) -> dict[str, object]:
         self._assert_owner()
-        from ..vllm_bundle import _tensor_record, _manifest_sha256
-        actual = {name: _tensor_record(value) for name, value in self.reference.model.state_dict().items()}
+        from ..checkpoint_bundle import _tensor_record, _manifest_sha256
+        actual = {name: _tensor_record(value) for name, value in cast('PyTorchPredictor',self.reference).model.state_dict().items()}
         expected = self.bundle['receipt']['tensor_manifest']
         if actual != expected:
             raise WorkerIntegrityError('Loaded model tensor values differ from the verified bundle')
@@ -224,18 +237,18 @@ class ResidentSceneWorker:
                 'matched_bundle_tensor_values': True,
                 'scope': 'Owner-thread hash of every live tensor value; not remote attestation'}
 
-    def _assert_owner(self):
+    def _assert_owner(self) -> None:
         if threading.get_ident() != self.owner:
             raise RuntimeError('All worker operations must stay on its owner thread')
 
-    def _guard(self):
+    def _guard(self) -> float:
         self._assert_owner()
         start = perf_counter()
         try:
             if self.state != 'ready':
                 raise WorkerIntegrityError('Resident worker is not ready')
             self.file_seal.verify()
-            self.tensor_seal.verify()
+            cast(TensorSeal,self.tensor_seal).verify()
             if self._precision(self.torch) != self.precision:
                 raise WorkerIntegrityError('Resident precision settings changed')
         except BaseException:
@@ -243,7 +256,7 @@ class ResidentSceneWorker:
             raise
         return perf_counter()-start
 
-    def metadata(self):
+    def metadata(self) -> dict[str, object]:
         self._assert_owner()
         value = {'worker_id': self.worker_id, 'state': self.state,
             'model_name': getattr(self,'model_name','KAO-TerraMind B'), 'model_load_count': self.model_load_count,
@@ -262,14 +275,14 @@ class ResidentSceneWorker:
                 'scope': 'Owner-thread snapshot after initialization or job return; not live device-wide usage'}
         return value
 
-    def _gpu_call(self, function, *args):
+    def _gpu_call(self, function: Callable[[int], R], *args: int) -> R:
         try:
             return function(*args)
         except BaseException:
             self.state = 'failed'
             raise
 
-    def run_job(self, scene_id, job_id, output_dir):
+    def run_job(self, scene_id: str, job_id: str, output_dir: PathInput) -> CompletedReceipt:
         if self.streaming:
             from .stream_worker import run_streaming_job
             return run_streaming_job(self,scene_id,job_id,output_dir)
@@ -314,14 +327,14 @@ class ResidentSceneWorker:
                 'height': prepared.height, 'width': prepared.width})
             validation['reference_preparation_seconds'] = perf_counter()-start
             start = perf_counter()
-            reference_logits = np.concatenate([self.eager(prepared.values[i:i+1])
+            reference_logits = np.concatenate([cast(SequentialEagerAdapter,self.eager)(prepared.values[i:i+1])
                 for i in range(len(prepared.windows))], axis=0)
             reference_result = _reference_scene(source, prepared, reference_logits)
             _save_array(output/'eager_logits.npy', reference_logits)
             _save_array(output/'eager_classes.npy', reference_result.class_map)
             validation['eager_reference_and_recipe_seconds'] = perf_counter()-start
             write_json(output/'worker-startup.json', self.startup_receipt)
-            before_adapter = self.candidate.metadata()
+            before_adapter = cast(FullEightEagerTailAdapter,self.candidate).metadata()
             self._gpu_call(self.torch.cuda.reset_peak_memory_stats, 0)
             warm_start = perf_counter()
             start = perf_counter()
@@ -338,7 +351,7 @@ class ResidentSceneWorker:
             for i in range(0, len(actual.windows), 8):
                 count = min(8, len(actual.windows)-i)
                 start = perf_counter()
-                predicted[i:i+count] = self.candidate(actual.values[i:i+count])
+                predicted[i:i+count] = cast(FullEightEagerTailAdapter,self.candidate)(actual.values[i:i+count])
                 groups.append({'first_tile': i, 'real_tiles': count, 'padding_tiles': 0, 'neural_forwards': count,
                                'elapsed_seconds': perf_counter()-start})
             stages['predict_seconds'] = sum(row['elapsed_seconds'] for row in groups)
@@ -347,7 +360,7 @@ class ResidentSceneWorker:
             stages['stitch_argmax_seconds'] = perf_counter()-start
             start = perf_counter()
             parity = compare_logits(reference_logits, predicted)
-            parity.update(scene_class_map_equal=bool(np.array_equal(result.class_map, reference_result.class_map)),
+            cast(dict[str,object],parity).update(scene_class_map_equal=bool(np.array_equal(result.class_map, reference_result.class_map)),
                 scene_mask_equal=bool(np.array_equal(result.valid_mask, reference_result.valid_mask)),
                 normalization_and_tile_order_equal=True,
                 reference_scope='Separate eager batch-one execution for every job; same strictly loaded resident model')
@@ -408,7 +421,7 @@ class ResidentSceneWorker:
                 'stages_seconds': stages, 'warm_job_seconds': warm_seconds,
                 'startup': {'resident_worker_already_initialized_seconds': 0.0},
                 'validation_overhead': validation, 'parity': parity, 'artifacts': artifacts,
-                'adapter_before_job': before_adapter, 'adapter_after_job': self.candidate.metadata(),
+                'adapter_before_job': before_adapter, 'adapter_after_job': cast(FullEightEagerTailAdapter,self.candidate).metadata(),
                 'source_sha256': self.sources,
                 'memory': {'cuda_peak_allocated_bytes': self._gpu_call(self.torch.cuda.max_memory_allocated, 0),
                     'cuda_peak_reserved_bytes': self._gpu_call(self.torch.cuda.max_memory_reserved, 0),
@@ -426,7 +439,7 @@ class ResidentSceneWorker:
             receipt['worker_job_seconds_before_receipt'] = perf_counter()-whole_start
             write_json(output/'job.json', receipt)
             self.jobs_completed += 1
-            downloads = {}
+            downloads: dict[str,ArtifactDeclaration] = {}
             for public, member in {'class_map.tif':'artifacts/class_map.tif',
                     'valid_mask.tif':'artifacts/valid_mask.tif', 'provenance.json':'artifacts/receipt.json',
                     'job.json':'job.json'}.items():
@@ -448,7 +461,7 @@ class ResidentSceneWorker:
                 pass
             raise
 
-    def _release_resources(self):
+    def _release_resources(self) -> list[dict[str, str]]:
         retained = {name: weakref.ref(value) for name, value in (
             ('model', getattr(self.reference, 'model', None)), ('predictor', self.reference),
             ('graph', self.graph), ('candidate', self.candidate), ('eager', self.eager)) if value is not None}
@@ -468,7 +481,9 @@ class ResidentSceneWorker:
             # Only this process's sole GPU owner reaches this lifecycle point.
             # PyTorch 2.10 keeps a cuBLAS workspace per handle/stream after model
             # tensors are freed. Release it after synchronization, then cache.
-            if self.torch.cuda.is_initialized():
+            # This upstream CUDA query lacks an annotation in PyTorch 2.11;
+            # isolate that API boundary while retaining real types elsewhere.
+            if cast(CudaProcess, self.torch.cuda).is_initialized():
                 try:
                     self.torch.cuda.synchronize(0)
                 except Exception as error:
@@ -486,17 +501,17 @@ class ResidentSceneWorker:
                 errors.append({'stage':'empty_cache', 'error_type':type(error).__name__, 'error':str(error)})
         return errors
 
-    def close(self):
+    def close(self) -> dict[str, object] | None:
         self._assert_owner()
         if self.state == 'closed':
-            return
+            return None
         errors = []
         start = perf_counter()
         previous_state = self.state
         loaded_identity = None
         try:
             self.file_seal.verify()
-            self.tensor_seal.verify()
+            cast(TensorSeal,self.tensor_seal).verify()
             if self._precision(self.torch) != self.precision:
                 raise WorkerIntegrityError('Resident precision settings changed before shutdown')
         except Exception as error:

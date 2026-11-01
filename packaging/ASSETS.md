@@ -37,8 +37,9 @@ Check the complete local file with `sha256sum FILE` before use.
 - Bytes: 398251303
 - SHA256: `d5cd2c97ce853971c847eb1a423c6d5ba996eff8ebc0e1e64d116bed64e5e23a`
 
-KAO-TerraMind B is converted with the installed `aureon prepare-vllm` command
-in [START-HERE.md](START-HERE.md). TerraMind uses the two pinned files directly
+Convert KAO-TerraMind B into a verified local bundle using the
+[checkpoint preparation steps](START-HERE.md#first-kao-terramind-b-result).
+TerraMind uses the two pinned files directly
 through `aureon-engine generation-config`. No manual operator bundle or
 private scripts are required. A/C identities remain available through the
 metadata CLI, with their separate earlier-artifact support scope.

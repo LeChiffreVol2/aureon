@@ -52,9 +52,10 @@ Copyright 2025 IBM.
 These notices appear in the upstream TerraTorch model wrapper consulted
 for AUREON interoperability. The recorded wrapper blob
 ce04acc72d379f0ebd8314d831a301ae02271a4f is present at vLLM commit
-8a5cf5438728180210aea43897d6a717de4b46ec. AUREON's bundle and client code
-references this wrapper and the vLLM 0.19.0 pooling protocol; the wrapper
-implementation is not vendored by this candidate.
+8a5cf5438728180210aea43897d6a717de4b46ec. The retained checkpoint bundle
+format originated in that interoperability work. The external service client
+has been removed; this attribution records provenance, not a runtime dependency.
+The upstream wrapper implementation is not vendored by this candidate.
 
 See THIRD-PARTY-NOTICES.md for exact source links, scope, and license files.
 Model weights, satellite imagery, labels, and private training data are
@@ -69,3 +70,10 @@ in aureon/terramind_native/upstream-source.json. AUREON adds strict local
 loading, request isolation, unchanged-conditioning reuse, guarded denoiser
 capture and synthetic geospatial delivery. No model/tokenizer weights or
 upstream runtime source are bundled by this integration.
+
+Experimental COP-GEN adapter
+---------------------------
+This package includes AUREON's optional adapter, not upstream COP-GEN code or
+weights. Separately supplied source/assets retain their own terms and attribution.
+See aureon/copgen_native/NOTICE.md and PROFILE.md for pinned source/model references
+and the explicit dependency profiles. Default dependencies are unchanged.

@@ -1,4 +1,6 @@
 """Explicit two-job resident example. --help never imports the model runtime."""
+from __future__ import annotations
+
 import argparse
 import json
 
@@ -6,7 +8,7 @@ from .common import read_json
 from .session import TerraMindSession
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Run two serial synthetic S1GRD jobs with one TerraMind model load")
     parser.add_argument("--config", required=True, help="Verified local native adapter configuration")
     parser.add_argument("--work", required=True, help="Fresh session directory, existing parent")

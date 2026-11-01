@@ -1,4 +1,8 @@
 """Strict local native loading; upstream permissive checkpoint filters are unused."""
+from __future__ import annotations
+from typing import Any, cast
+from ._types import TerraMindModel, Metadata, PathInput, TensorMap
+from collections.abc import Mapping
 from contextlib import ExitStack
 import importlib.metadata as metadata
 import os
@@ -6,19 +10,36 @@ from pathlib import Path
 from unittest.mock import patch
 
 from .common import MODEL_SHA, TOKENIZER_SHA, digest, file_hash, read_json, validate_recipe, verify_file
+from .families import get_terramind_spec, PINNED_S1GRD
 
 
-def verify_config(config_path):
+def config_model_id(config: Mapping[str, Any]) -> str:
+    """Legacy configs are base; explicit IDs must identify a generation factory."""
+    model_id = config.get("model_id", "terramind-v1-base")
+    if not isinstance(model_id, str) or get_terramind_spec(model_id).mode != "generation":
+        raise ValueError("Config model_id must identify TerraMind generation")
+    return model_id
+
+
+def verify_config(config_path: PathInput) -> tuple[Metadata, dict[str, Path], Metadata]:
     config_path = Path(config_path).resolve(strict=True)
     config = read_json(config_path)
     expected = {"schema", "model", "tokenizer", "source_manifest", "dependencies", "input_manifest", "recipe"}
-    if set(config) != expected or config["schema"] != "aureon.terramind_native.v1":
+    if "model_id" in config:
+        expected.add("model_id")
+    memory = config.get("schema") == "aureon.terramind_assets.v1"
+    if memory:
+        expected.remove("input_manifest")
+    if set(config) != expected or config["schema"] not in ("aureon.terramind_native.v1", "aureon.terramind_assets.v1"):
         raise ValueError("Unexpected native config schema/fields")
+    spec = get_terramind_spec(config_model_id(config))
+    for name, pin in (("model", spec.checkpoint), ("tokenizer", PINNED_S1GRD)):
+        if any(config[name].get(key) != expected_value for key, expected_value in
+               (("sha256", pin.sha256), ("revision", pin.revision), ("bytes", pin.bytes))):
+            raise ValueError("Pinned generation asset identity differs: " + name)
     recipe = validate_recipe(config["recipe"])
     paths = {name: verify_file(config[name], config_path.parent)
-             for name in ("model", "tokenizer", "source_manifest", "input_manifest")}
-    if config["model"]["sha256"] != MODEL_SHA or config["tokenizer"]["sha256"] != TOKENIZER_SHA:
-        raise ValueError("Only the pinned TerraMind base and S1GRD tokenizer are supported")
+             for name in ("model", "tokenizer", "source_manifest", "input_manifest") if name in config}
     for name in ("model", "tokenizer"):
         if not config[name].get("revision") or type(config[name].get("bytes")) is not int:
             raise ValueError("Immutable artifact revision and exact byte size required")
@@ -27,14 +48,14 @@ def verify_config(config_path):
     for name, version in config["dependencies"].items():
         if metadata.version(name) != version: raise ValueError("Dependency differs: " + name)
     source = read_json(paths["source_manifest"])
-    base = Path(metadata.distribution("terratorch").locate_file(""))
+    base = Path(cast(Path, metadata.distribution("terratorch").locate_file("")))
     if len(source["files"]) != 37: raise ValueError("Expected inspected 37-file TerraMind source inventory")
     for item in source["files"]:
         verify_file(item, base)
     return config, paths, recipe
 
 
-def select_state(expected, checkpoint, *, allow_inactive_embeddings):
+def select_state(expected: Mapping[str, Any], checkpoint: object, *, allow_inactive_embeddings: bool) -> tuple[TensorMap, list[str]]:
     """Reject every absent/mismatched active tensor; report unused modalities."""
     if not isinstance(checkpoint, dict) or not all(isinstance(k, str) for k in checkpoint):
         raise ValueError("Expected a flat restricted tensor state dictionary")
@@ -57,7 +78,7 @@ def select_state(expected, checkpoint, *, allow_inactive_embeddings):
     return selected, extra
 
 
-def strict_load(module, path, *, allow_inactive_embeddings=False):
+def strict_load(module: Any, path: PathInput, *, allow_inactive_embeddings: bool=False) -> Metadata:
     import torch
     checkpoint = torch.load(path, map_location="cpu", weights_only=True, mmap=True)
     expected = module.state_dict()
@@ -77,7 +98,7 @@ def strict_load(module, path, *, allow_inactive_embeddings=False):
             "unused_inactive_modality_keys": unused}
 
 
-def verify_embedding_aliases(model):
+def verify_embedding_aliases(model: TerraMindModel) -> None:
     # TerraMind wraps the mapping in a fresh ModuleDict, retaining its modules.
     # Container identity is not required; every active embedding module is.
     for name in ("encoder_embeddings", "decoder_embeddings"):
@@ -87,22 +108,28 @@ def verify_embedding_aliases(model):
             raise ValueError("Upstream active embedding alias relationship changed")
 
 
-def load_native(config_path):
+def load_native(config_path: PathInput) -> tuple[TerraMindModel, Metadata, Metadata, dict[str, Path]]:
     config, paths, recipe = verify_config(config_path)
+    spec = get_terramind_spec(config_model_id(config))
     # The harness is a dedicated offline process, not a shared application server.
     os.environ["HF_HUB_OFFLINE"] = "1"
     os.environ["TRANSFORMERS_OFFLINE"] = "1"
     import torch
-    from terratorch.models.backbones.terramind.model import terramind_register as registry
-    from terratorch.models.backbones.terramind.tokenizer import tokenizer_register
     from .rng import rng_capsule
+    # Cold optional-dependency imports consume Python RNG before construction.
+    # The resident session owns precision policy, but import-time RNG effects
+    # must not escape the first request, including when an import fails.
+    with rng_capsule(0, devices=(0,) if torch.cuda.is_initialized() else ()):
+        from terratorch.models.backbones.terramind.model import terramind_register as registry  # Optional upstream typing is declared in the implementation-checker boundary policy.
+        from terratorch.models.backbones.terramind.tokenizer import tokenizer_register  # Optional upstream typing is declared in the implementation-checker boundary policy.
     previous_dtype = torch.get_default_dtype()
     try:
         torch.set_default_dtype(torch.float32)
         with rng_capsule(0), ExitStack() as stack:
             for target in (registry, tokenizer_register):
                 stack.enter_context(patch.object(target, "hf_hub_download", side_effect=RuntimeError("Implicit download forbidden")))
-            model = registry.terramind_v1_base_generate(
+            factory = getattr(registry, spec.upstream_name)
+            model = factory(
                 pretrained=False, modalities=["S2L2A"], output_modalities=["S1GRD"],
                 standardize=True, img_size=224, decoding_steps=recipe["token_steps"],
                 temps=recipe["temperature"], top_p=recipe["top_p"], top_k=recipe["top_k"],
@@ -121,6 +148,7 @@ def load_native(config_path):
         for name in ("model", "tokenizer"):
             if file_hash(paths[name]) != config[name]["sha256"]: raise ValueError("Artifact changed during load")
         return model, {"model": model_receipt, "tokenizer": tokenizer_receipt,
+                       "model_id": spec.model_id, "model_size": spec.size,
                        "config_sha256": file_hash(config_path), "recipe": recipe,
                        "pretrained_downloads": False, "fallback_random_tensors": 0}, config, paths
     finally:

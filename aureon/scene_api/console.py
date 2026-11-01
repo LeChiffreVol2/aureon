@@ -1,4 +1,8 @@
 """Bounded immutable snapshots of the three local scene-console assets."""
+from __future__ import annotations
+from collections.abc import Callable
+import os
+from ..serving.contracts import PathInput
 from dataclasses import dataclass
 import hashlib
 from pathlib import Path
@@ -26,23 +30,23 @@ HEADERS = {
 @dataclass(frozen=True)
 class ConsoleAssets:
     # Only immutable strings/bytes/tuples are retained by the HTTP listener.
-    files: tuple
+    files: tuple[tuple[str, bytes, str, str], ...]
 
-    def get(self, route):
+    def get(self, route: str) -> tuple[bytes, str, str] | None:
         name = ROUTES.get(route)
         for filename, body, mime, digest in self.files:
             if filename == name:
                 return body, mime, digest
         return None
 
-    def manifest(self):
+    def manifest(self) -> dict[str, object]:
         return {'schema': 'aureon.local_scene_console_assets.v1',
                 'scope': 'Exact public asset bytes snapshotted at explicit service startup; no credentials or model execution',
                 'files': {name: {'bytes': len(body), 'sha256': digest, 'content_type': mime}
                           for name, body, mime, digest in self.files}}
 
 
-def load_console_assets(directory):
+def load_console_assets(directory: PathInput) -> ConsoleAssets:
     folder = Path(directory)
     if folder.is_symlink() or not folder.is_dir():
         raise ValueError('Console directory must be an existing ordinary directory')
@@ -58,7 +62,7 @@ def load_console_assets(directory):
         with path.open('rb') as stream:
             body = stream.read(MAX_ASSET_BYTES+1)
         after = path.lstat()
-        stamp = lambda value: (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_ctime_ns, value.st_mode)
+        stamp: Callable[[os.stat_result], tuple[int, int, int, int, int, int]] = lambda value: (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_ctime_ns, value.st_mode)
         if len(body) != before.st_size or stamp(before) != stamp(after) or path.is_symlink():
             raise ValueError('Console asset changed while making its startup snapshot')
         body.decode('utf-8')

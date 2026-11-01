@@ -1,4 +1,7 @@
 """Measured scene stages and parity helpers, independent of a model runtime."""
+
+from __future__ import annotations
+from ..value_types import Array, FloatArray, BoolArray, ParityStatistics
 from dataclasses import dataclass
 import hashlib
 import math
@@ -13,20 +16,20 @@ from ..recipe import (INPUT_UNITS, S2_BANDS, NUM_CLASSES, NODATA_CLASS,
 
 @dataclass(frozen=True)
 class PreparedTiles:
-    values: np.ndarray
-    windows: tuple
+    values: FloatArray
+    windows: tuple[tuple[int, int, int, int], ...]
     height: int
     width: int
     total: int
     skipped: int
-    timings: dict
+    timings: dict[str, float]
 
 
-def array_hash(array):
+def array_hash(array: Array) -> str:
     return hashlib.sha256(memoryview(np.ascontiguousarray(array).reshape(-1)).cast('B')).hexdigest()
 
 
-def prepare_tiles(image, valid_mask):
+def prepare_tiles(image: FloatArray, valid_mask: BoolArray) -> PreparedTiles:
     """Use the unchanged recipe normalization/anchors; retain row-major order."""
     start = perf_counter()
     normalized = normalize_s2(image, valid_mask, bands=S2_BANDS, units=INPUT_UNITS)
@@ -49,7 +52,7 @@ def prepare_tiles(image, valid_mask):
                           'tiling_seconds': perf_counter()-normalized_at})
 
 
-def blend_logits(prepared, logits, valid_mask, *, batch_size=8, predictor_calls=None):
+def blend_logits(prepared: PreparedTiles, logits: FloatArray, valid_mask: BoolArray, *, batch_size: int=8, predictor_calls: int | None=None) -> SegmentationResult:
     """Uniform FP32 accumulation in original recipe order, then argmax."""
     expected = (len(prepared.windows), NUM_CLASSES, WINDOW_SIZE, WINDOW_SIZE)
     if (not isinstance(logits, np.ndarray) or logits.dtype != np.float32
@@ -74,7 +77,7 @@ def blend_logits(prepared, logits, valid_mask, *, batch_size=8, predictor_calls=
         batch_size, predictor_calls if predictor_calls is not None else math.ceil(count/batch_size))
 
 
-def compare_logits(reference, candidate, *, atol=1e-5, rtol=1e-5):
+def compare_logits(reference: FloatArray, candidate: FloatArray, *, atol: float=1e-5, rtol: float=1e-5) -> ParityStatistics:
     for value in (atol, rtol):
         if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0:
             raise ValueError('Parity tolerances must be finite nonnegative numbers')
@@ -101,8 +104,8 @@ def compare_logits(reference, candidate, *, atol=1e-5, rtol=1e-5):
             'passed': close and agreement == 1.0}
 
 
-def cost_report(warm_job_seconds, startup_seconds, validation_seconds, valid_area_km2,
-                *, hourly_rate=1.0, currency='THB'):
+def cost_report(warm_job_seconds: float, startup_seconds: float, validation_seconds: float, valid_area_km2: float,
+                *, hourly_rate: float=1.0, currency: str='THB') -> dict[str, object]:
     values = (warm_job_seconds, startup_seconds, validation_seconds, valid_area_km2, hourly_rate)
     if any(isinstance(x, bool) or not isinstance(x, (float, int)) or not math.isfinite(x) or x < 0 for x in values):
         raise ValueError('Cost inputs must be finite nonnegative numbers')

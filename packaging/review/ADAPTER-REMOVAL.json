@@ -1,0 +1,22 @@
+{
+  "schema": "aureon.adapter_removal.v1",
+  "version": "0.1.0",
+  "new_gpu_qualification": false,
+  "scope": "Public comparator removal; retained checkpoint migration and config tensors unchanged. Historical model qualification is not transferred to this candidate.",
+  "files": {
+    "aureon/catalog.py": {
+      "original_path": "aureon/catalog.py",
+      "original_sha256": "5e82eff095948ba83b6ea40145bac84ece30e788e80bcdd01c9f2a9394908708",
+      "prior_candidate_sha256": "0f6345a19516d71d87896b45ed014d7092e9c537326136ee27e8a4f35f34fee9",
+      "candidate_sha256": "c426ec7b0fa218728f72aa98c1d58d65682f4fb5836c30875322fc9ff6cc2fa1",
+      "executable_ast_sha256": "6c74972695f2c50ab8728c69821449f62bb8671138fa15a5ce43ab890bd43a22"
+    },
+    "aureon/checkpoint_bundle.py": {
+      "original_path": "aureon/vllm_bundle.py",
+      "original_sha256": "4b7d799f35ef1ce3d19c69bc61d9ccc0cae1023c0b688af1fb06f1592c07dd28",
+      "prior_candidate_sha256": "e4cf409308d44b28362af47ff87f737849ed8b6a77d10b3d6840b7aad9fb0e77",
+      "candidate_sha256": "121a70f7f396229b4c9d2c25b429c01978e3b9dddf0a23f0881e85db45359fb6",
+      "executable_ast_sha256": "ee880ab0615f6f95c5423715b101118c6475860049d481a8b23b1c5594034d3d"
+    }
+  }
+}

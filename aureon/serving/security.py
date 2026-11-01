@@ -1,4 +1,10 @@
 """Bounded local key operations and request admission. No identity provider calls."""
+from __future__ import annotations
+import sqlite3
+from typing import TYPE_CHECKING
+from .contracts import PathInput, SecurityPolicy, TestPaymentEvent
+if TYPE_CHECKING:
+    from .control import Control
 import secrets
 import time
 import os
@@ -6,16 +12,16 @@ from pathlib import Path
 from ..cloud.control import require,encoded,digest,NAME,SHA,CONTRACT
 from ..scene_api.durable import _plain_path,_sync_dir
 
-POLICY={'request_burst':256,'requests_per_second':32,'active_keys_per_tenant':8,'key_records':10000,
+POLICY: SecurityPolicy={'request_burst':256,'requests_per_second':32,'active_keys_per_tenant':8,'key_records':10000,
         'identity_provider':'unconfigured','public_signup':'requires_verified_provider_adapter','billing':'local_nonbillable'}
 
-def write_secret(path,value):
+def write_secret(path: PathInput, value: object) -> None:
     path=_plain_path(path)
     descriptor=os.open(path,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
     with os.fdopen(descriptor,'wb') as stream:stream.write(encoded(value));stream.flush();os.fsync(stream.fileno())
     _sync_dir(path.parent)
 
-def schema(control):
+def schema(control: Control) -> None:
     with control.lock:
         control.db.executescript('''
           CREATE TABLE IF NOT EXISTS service_keys(hash TEXT PRIMARY KEY,tenant TEXT NOT NULL,created REAL NOT NULL,revoked REAL);
@@ -31,7 +37,7 @@ def schema(control):
         control.db.execute('INSERT OR IGNORE INTO service_meta VALUES (?,?)',('instance_id',encoded(secrets.token_hex(16)).decode()))
         control.db.commit()
 
-def admit_request(control,tenant):
+def admit_request(control: Control, tenant: str) -> None:
     now=time.monotonic()
     with control.lock:
         bucket=control._rate.get(tenant,(POLICY['request_burst'],now))
@@ -39,12 +45,12 @@ def admit_request(control,tenant):
         require(available>=1,'request_rate_exceeded',429)
         control._rate[tenant]=(available-1,now)
 
-def key_list(control,tenant):
+def key_list(control: Control, tenant: str) -> dict[str, object]:
     with control.lock:
         rows=control.db.execute('SELECT hash AS fingerprint,created FROM service_keys WHERE tenant=? AND revoked IS NULL ORDER BY created',(tenant,)).fetchall()
     return {'keys':[dict(r) for r in rows],'rotation':'Create a replacement, authenticate it, then revoke the old fingerprint. Lost issuance responses do not revoke the working key.'}
 
-def create_key(control,tenant):
+def create_key(control: Control, tenant: str) -> dict[str, object]:
     require(isinstance(tenant,str) and NAME.fullmatch(tenant),'invalid_tenant')
     key=secrets.token_urlsafe(32);fingerprint=digest(key.encode())
     with control.tx() as db:
@@ -55,7 +61,7 @@ def create_key(control,tenant):
         db.execute('INSERT INTO service_keys VALUES (?,?,?,NULL)',(fingerprint,tenant,control.clock()))
     return {'tenant':tenant,'fingerprint':fingerprint,'key':key,'shown_once':True,'revoked_existing_keys':False}
 
-def revoke_key(control,tenant,fingerprint):
+def revoke_key(control: Control, tenant: str, fingerprint: str) -> dict[str, object]:
     require(isinstance(fingerprint,str) and SHA.fullmatch(fingerprint),'invalid_key_fingerprint')
     with control.tx() as db:
         row=db.execute('SELECT * FROM service_keys WHERE hash=? AND tenant=?',(fingerprint,tenant)).fetchone()
@@ -66,7 +72,7 @@ def revoke_key(control,tenant,fingerprint):
             db.execute('UPDATE service_keys SET revoked=? WHERE hash=?',(control.clock(),fingerprint))
     return {'fingerprint':fingerprint,'revoked':True,'in_flight_requests':'Already authenticated requests may finish; subsequent requests reject this key.'}
 
-def reserve(control,db,job):
+def reserve(control: Control, db: sqlite3.Connection, job: str) -> None:
     row=db.execute('SELECT tenant FROM jobs WHERE id=?',(job,)).fetchone();tenant=row['tenant']
     entitlement=db.execute('SELECT * FROM service_entitlements WHERE tenant=?',(tenant,)).fetchone()
     if entitlement and entitlement['mode']=='test_required':
@@ -74,21 +80,21 @@ def reserve(control,db,job):
         require(entitlement['units']>pending,'entitlement_exhausted',402)
     db.execute('INSERT INTO service_usage VALUES (?,?,"reserved",1,0)',(job,tenant))
 
-def settle(db,job,state):
+def settle(db: sqlite3.Connection, job: str, state: str) -> None:
     row=db.execute('SELECT * FROM service_usage WHERE job=?',(job,)).fetchone()
     if row is None or row['state']!='reserved':return
     if state=='completed':
         db.execute('UPDATE service_entitlements SET units=MAX(0,units-?) WHERE tenant=? AND mode="test_required"',(row['units'],row['tenant']))
     db.execute('UPDATE service_usage SET state=? WHERE job=?',('settled' if state=='completed' else 'released',job))
 
-def shadow_statement(control,tenant):
+def shadow_statement(control: Control, tenant: str) -> dict[str, object]:
     with control.lock:
         rows=control.db.execute('SELECT state,COUNT(*) AS logical_jobs,SUM(units) AS units FROM service_usage WHERE tenant=? GROUP BY state',(tenant,)).fetchall()
     return {'schema':'aureon.shadow_usage.v1','tenant':tenant,'rows':[dict(r) for r in rows],'billable':False,
       'amount':None,'currency':None,'pricing':'unconfigured','failure_policy':'Failed or cancelled jobs release the reservation; internal attempts do not add a logical charge.',
       'refund_policy':'No real charges/refunds implemented; a later provider adapter must reconcile separately idempotent settlement/refund events.'}
 
-def test_payment_event(control,provider,event_id,body):
+def test_payment_event(control: Control, provider: str, event_id: str, body: TestPaymentEvent) -> dict[str, object]:
     """Local test adapter boundary only, deliberately absent from public HTTP routes."""
     require(provider=='local-test','payment_provider_unconfigured',503)
     require(isinstance(event_id,str) and NAME.fullmatch(event_id) and isinstance(body,dict),'invalid_test_event')
@@ -107,7 +113,7 @@ def test_payment_event(control,provider,event_id,body):
         db.execute('INSERT INTO service_payment_sequences VALUES (?,?) ON CONFLICT(tenant) DO UPDATE SET version=excluded.version',(tenant,body['sequence']))
     return {'reused':False,'real_payment':False,'credits_issued':False,'scope':'Synthetic admission-capacity units only; not money, free credits or verified payment events'}
 
-def test_identity(control,provider,subject):
+def test_identity(control: Control, provider: str, subject: str) -> dict[str, object]:
     """Exercise the future verified-identity adapter seam; no public signup handler."""
     require(provider=='local-test','identity_provider_unconfigured',503)
     require(isinstance(subject,str) and 1<=len(subject)<=256,'invalid_identity_subject')
@@ -116,7 +122,8 @@ def test_identity(control,provider,subject):
     with control.tx() as db:
         old=db.execute('SELECT tenant FROM service_identities WHERE provider=? AND subject=?',(provider,subject_hash)).fetchone()
         if old:return {'tenant':old['tenant'],'reused':True,'identity_verified':False,'key':None}
-        require(db.execute('SELECT COUNT(DISTINCT tenant) FROM service_keys').fetchone()[0]<16,'tenant_capacity',429)
+        require(db.execute('SELECT COUNT(DISTINCT tenant) FROM service_keys WHERE tenant!="operator"').fetchone()[0]
+            <getattr(control,'tenant_capacity',lambda:15)(),'tenant_capacity',429)
         db.execute('INSERT INTO service_identities VALUES (?,?,?)',(provider,subject_hash,tenant))
         db.execute('INSERT INTO credentials VALUES (?,?)',(fingerprint,tenant))
         db.execute('INSERT INTO service_keys VALUES (?,?,?,NULL)',(fingerprint,tenant,control.clock()))

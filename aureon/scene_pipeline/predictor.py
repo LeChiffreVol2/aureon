@@ -8,6 +8,13 @@ adapter invokes its independent reference execution path one tile at a time.
 Neither adapter changes precision, acquires weights, retries, or falls back.
 """
 
+from __future__ import annotations
+from contextlib import AbstractContextManager
+from types import TracebackType
+from typing import Self, cast
+from ..value_types import ArrayPredictor, FloatArray
+
+
 from copy import deepcopy
 import hashlib
 from pathlib import Path
@@ -21,7 +28,7 @@ TILE_INPUT_SHAPE = (12, 224, 224)
 TILE_OUTPUT_SHAPE = (10, 224, 224)
 
 
-def _input_copy(values):
+def _input_copy(values: object) -> FloatArray:
     if (not isinstance(values, np.ndarray) or values.ndim != 4
             or tuple(values.shape[1:]) != TILE_INPUT_SHAPE
             or not 1 <= values.shape[0] <= CAPACITY
@@ -31,16 +38,17 @@ def _input_copy(values):
     return np.array(values, dtype=np.float32, order="C", copy=True)
 
 
-def _logits(values, count):
+def _logits(values: object, count: int) -> FloatArray:
     if (not isinstance(values, np.ndarray)
             or values.shape != (count, *TILE_OUTPUT_SHAPE)
             or values.dtype != np.dtype("float32")
             or not np.isfinite(values).all()):
         raise ValueError(f"Predictor must return finite float32 [{count},10,224,224] logits")
-    return values
+    return cast(FloatArray, values)
 
 
-def _describe(predictor):
+def _describe(predictor: object) -> dict[str, object]:
+    value: dict[str, object]
     get_metadata = getattr(predictor, "metadata", None)
     if callable(get_metadata):
         value = get_metadata()
@@ -57,33 +65,34 @@ def _describe(predictor):
 
 
 class _Adapter:
-    def __init__(self, predictor, *, owns_predictor=False):
+    execution_scope: str
+    def __init__(self, predictor: ArrayPredictor, *, owns_predictor: bool=False) -> None:
         if not callable(predictor):
             raise ValueError("Supply an explicitly constructed callable predictor")
         if type(owns_predictor) is not bool:
             raise ValueError("owns_predictor must be a boolean")
-        self._predictor = predictor
+        self._predictor: ArrayPredictor | None = predictor
         self._owns_predictor = owns_predictor
-        self._lock = threading.Lock()
-        self._closed_backend = None
+        self._lock: AbstractContextManager[object] = threading.Lock()
+        self._closed_backend: dict[str, object] | None = None
         self.state = "ready"
         self.calls_attempted = self.calls_completed = self.backend_calls_attempted = 0
         self.real_tiles_submitted = self.real_tiles_completed = 0
         self.padding_slots_submitted = self.padding_outputs_discarded = 0
-        self.failure = None
+        self.failure: dict[str, str] | None = None
 
-    def _ready(self):
+    def _ready(self) -> None:
         if self.state != "ready":
             raise RuntimeError(f"Scene predictor adapter is {self.state}; no retry or fallback")
 
-    def _failed(self, error):
+    def _failed(self, error: BaseException) -> None:
         self.state = "failed"
         self.failure = {"type": type(error).__name__, "message": str(error)}
 
-    def metadata(self):
+    def metadata(self) -> dict[str, object]:
         with self._lock:
             backend = (_describe(self._predictor) if self._predictor is not None
-                       else deepcopy(self._closed_backend))
+                       else deepcopy(cast(dict[str, object], self._closed_backend)))
             return {
                 "schema": "aureon.scene_predictor.v1",
                 "adapter": type(self).__name__, "state": self.state,
@@ -108,7 +117,7 @@ class _Adapter:
                 "capture_and_warmup_scope": "Owned by injected backend; inspect backend metadata and caller timing receipts",
             }
 
-    def close(self):
+    def close(self) -> None:
         with self._lock:
             if self.state == "closed":
                 return
@@ -127,12 +136,12 @@ class _Adapter:
             self._predictor = None
             self.state = "closed"
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         with self._lock:
             self._ready()
         return self
 
-    def __exit__(self, exc_type, exc, traceback):
+    def __exit__(self, exc_type: type[BaseException] | None, exc: BaseException | None, traceback: TracebackType | None) -> None:
         self.close()
 
 
@@ -146,7 +155,7 @@ class FixedEightAdapter(_Adapter):
 
     execution_scope = "Fixed-eight backend call; backend must preserve ordered batch-one arithmetic"
 
-    def __call__(self, normalized_batch):
+    def __call__(self, normalized_batch: FloatArray) -> FloatArray:
         values = _input_copy(normalized_batch)
         count = len(values)
         with self._lock:
@@ -158,7 +167,7 @@ class FixedEightAdapter(_Adapter):
                 group = np.zeros((CAPACITY, *TILE_INPUT_SHAPE), dtype=np.float32)
                 group[:count] = values
                 self.backend_calls_attempted += 1
-                output = _logits(self._predictor(group), CAPACITY)
+                output = _logits(cast(ArrayPredictor, self._predictor)(group), CAPACITY)
                 result = np.array(output[:count], dtype=np.float32, order="C", copy=True)
             except BaseException as error:
                 self._failed(error)
@@ -174,7 +183,7 @@ class SequentialEagerAdapter(_Adapter):
 
     execution_scope = "Independent eager execution path, one tile per backend call in input order"
 
-    def __call__(self, normalized_batch):
+    def __call__(self, normalized_batch: FloatArray) -> FloatArray:
         values = _input_copy(normalized_batch)
         count = len(values)
         with self._lock:
@@ -186,7 +195,7 @@ class SequentialEagerAdapter(_Adapter):
                 for index in range(count):
                     tile = np.array(values[index:index + 1], dtype=np.float32, order="C", copy=True)
                     self.backend_calls_attempted += 1
-                    result[index:index + 1] = _logits(self._predictor(tile), 1)
+                    result[index:index + 1] = _logits(cast(ArrayPredictor, self._predictor)(tile), 1)
             except BaseException as error:
                 self._failed(error)
                 raise
@@ -208,21 +217,21 @@ class FullEightEagerTailAdapter(_Adapter):
     execution_scope = ("Eight real tiles: existing fixed-eight backend; one to seven real tiles: "
                        "ordered eager batch-one calls; zero padding forwards")
 
-    def __init__(self, graph_predictor, eager_predictor):
+    def __init__(self, graph_predictor: ArrayPredictor, eager_predictor: ArrayPredictor) -> None:
         if not callable(eager_predictor):
             raise ValueError("Supply an explicitly constructed eager callable")
         super().__init__(graph_predictor, owns_predictor=False)
         # metadata() composes the unchanged base receipt under the same lock.
         self._lock = threading.RLock()
-        self._eager_predictor = eager_predictor
-        self._closed_eager_backend = None
+        self._eager_predictor: ArrayPredictor | None = eager_predictor
+        self._closed_eager_backend: dict[str, object] | None = None
         self.graph_groups_attempted = self.graph_groups_completed = 0
         self.tail_groups_attempted = self.tail_groups_completed = 0
         self.eager_tile_calls_attempted = self.eager_tile_calls_completed = 0
         self.backend_calls_completed = 0
         self.neural_tile_forwards_submitted = self.neural_tile_forwards_completed = 0
 
-    def __call__(self, normalized_batch):
+    def __call__(self, normalized_batch: FloatArray) -> FloatArray:
         values = _input_copy(normalized_batch)
         count = len(values)
         with self._lock:
@@ -234,7 +243,7 @@ class FullEightEagerTailAdapter(_Adapter):
                     self.graph_groups_attempted += 1
                     self.backend_calls_attempted += 1
                     self.neural_tile_forwards_submitted += CAPACITY
-                    output = _logits(self._predictor(values), CAPACITY)
+                    output = _logits(cast(ArrayPredictor, self._predictor)(values), CAPACITY)
                     result = np.array(output, dtype=np.float32, order="C", copy=True)
                     self.backend_calls_completed += 1
                     self.neural_tile_forwards_completed += CAPACITY
@@ -247,7 +256,7 @@ class FullEightEagerTailAdapter(_Adapter):
                         self.backend_calls_attempted += 1
                         self.eager_tile_calls_attempted += 1
                         self.neural_tile_forwards_submitted += 1
-                        result[index:index + 1] = _logits(self._eager_predictor(tile), 1)
+                        result[index:index + 1] = _logits(cast(ArrayPredictor, self._eager_predictor)(tile), 1)
                         self.backend_calls_completed += 1
                         self.eager_tile_calls_completed += 1
                         self.neural_tile_forwards_completed += 1
@@ -259,12 +268,12 @@ class FullEightEagerTailAdapter(_Adapter):
             self.real_tiles_completed += count
             return result
 
-    def _describe_eager(self):
+    def _describe_eager(self) -> dict[str, object]:
         value = _describe(self._eager_predictor)
         value["validate_on_cpu"] = getattr(self._eager_predictor, "validate_on_cpu", None)
         return value
 
-    def metadata(self):
+    def metadata(self) -> dict[str, object]:
         with self._lock:
             value = super().metadata()
             value.update({
@@ -281,12 +290,12 @@ class FullEightEagerTailAdapter(_Adapter):
                 "forward_counter_scope": "Requested logical tile forwards and validated returned logits; excludes internal capture/warmup; a failed invocation may have executed only part of its submitted work",
                 "owns_eager_predictor": False,
                 "eager_backend": (self._describe_eager() if self._eager_predictor is not None
-                                  else deepcopy(self._closed_eager_backend)),
+                                  else deepcopy(cast(dict[str, object], self._closed_eager_backend))),
                 "tail_validation_policy": "Inherited injected eager predictor policy; this adapter also validates CPU FP32 shape/finiteness",
             })
             return value
 
-    def close(self):
+    def close(self) -> None:
         with self._lock:
             if self.state == "closed":
                 return

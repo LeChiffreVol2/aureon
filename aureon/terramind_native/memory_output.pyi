@@ -1,0 +1,6 @@
+from pathlib import Path
+from typing import Any
+from ..api.contracts import GenerationResult
+
+def array_identity(array: Any) -> dict[str, Any]: ...
+def export_generation(result: GenerationResult, output: str | Path) -> dict[str, Any]: ...

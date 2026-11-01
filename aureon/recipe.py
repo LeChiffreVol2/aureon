@@ -14,6 +14,10 @@ https://huggingface.co/kaopanboonyuen/KAO-TerraMind-C/tree/4e7252d3c83b3e877744d
 The tiling and validation implementation below is authored for AUREON.
 """
 
+from __future__ import annotations
+from typing import cast
+from .value_types import Array, FloatArray, BoolArray, ClassArray
+
 from dataclasses import dataclass
 from typing import Callable, Sequence
 
@@ -58,9 +62,9 @@ class SegmentationResult:
     the model catalog defines their labels.
     """
 
-    class_map: np.ndarray
-    valid_mask: np.ndarray
-    max_uncalibrated_score: np.ndarray | None
+    class_map: ClassArray
+    valid_mask: BoolArray
+    max_uncalibrated_score: FloatArray | None
     recipe_id: str
     recipe_status: str
     tiles_total: int
@@ -71,8 +75,8 @@ class SegmentationResult:
 
 
 def _validate_input(
-    image: np.ndarray,
-    valid_mask: np.ndarray,
+    image: Array,
+    valid_mask: BoolArray,
     bands: Sequence[str],
     units: str,
 ) -> tuple[int, int]:
@@ -105,12 +109,12 @@ def _validate_input(
 
 
 def normalize_s2(
-    image: np.ndarray,
-    valid_mask: np.ndarray,
+    image: Array,
+    valid_mask: BoolArray,
     *,
     bands: Sequence[str],
     units: str,
-) -> np.ndarray:
+) -> FloatArray:
     """Validate and normalize a declared S2 stack to float32 [12, H, W].
 
     Values use the published bandwise (value - mean) / standard deviation
@@ -151,7 +155,7 @@ def _check_cancelled(cancelled: Callable[[], bool] | None) -> None:
         raise RecipeCancelled("land-cover recipe cancelled; no result was returned")
 
 
-def _validated_logits(output: np.ndarray, batch_count: int) -> np.ndarray:
+def _validated_logits(output: Array, batch_count: int) -> FloatArray:
     expected_shape = (batch_count, NUM_CLASSES, WINDOW_SIZE, WINDOW_SIZE)
     if not isinstance(output, np.ndarray) or output.shape != expected_shape:
         raise ValueError(f"predictor must return a NumPy array with shape {expected_shape}")
@@ -165,9 +169,9 @@ def _validated_logits(output: np.ndarray, batch_count: int) -> np.ndarray:
 
 
 def segment_tiled(
-    image: np.ndarray,
-    valid_mask: np.ndarray,
-    predictor: Callable[[np.ndarray], np.ndarray],
+    image: Array,
+    valid_mask: BoolArray,
+    predictor: Callable[[FloatArray], Array],
     *,
     bands: Sequence[str],
     units: str,
@@ -218,15 +222,15 @@ def segment_tiled(
     executed = 0
     skipped = 0
     predictor_calls = 0
-    batch = None
-    pending = []
+    batch: FloatArray | None = None
+    pending: list[tuple[int, int, int, int]] = []
 
     def flush_batch() -> None:
         nonlocal executed, predictor_calls
         if not pending:
             return
         _check_cancelled(cancelled)
-        logits = _validated_logits(predictor(batch[:len(pending)]), len(pending))
+        logits = _validated_logits(predictor(cast(FloatArray, batch)[:len(pending)]), len(pending))
         _check_cancelled(cancelled)
         predictor_calls += 1
         for index, (row, column, bottom, right) in enumerate(pending):

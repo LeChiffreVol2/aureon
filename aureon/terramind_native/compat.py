@@ -5,6 +5,10 @@ GenerationSampler.generate supports num_tokens=None to honor its own schedule.
 This context changes that argument only for the fixed eight-step profile, equally
 in both arms. Upstream source and sampler numerical implementation are unchanged.
 """
+from __future__ import annotations
+from typing import Any, TYPE_CHECKING, cast
+from collections.abc import Iterator
+from ._types import TerraMindModel, Metadata
 from contextlib import contextmanager
 from numbers import Integral
 import types
@@ -15,7 +19,7 @@ _MISSING = object()
 
 
 @contextmanager
-def schedule_compatibility(model, *, token_steps):
+def schedule_compatibility(model: TerraMindModel, *, token_steps: int) -> Iterator[Metadata]:
     if token_steps not in (1,8) or type(token_steps) is not int:
         raise ValueError("Compatibility is restricted to the frozen one/eight-step profiles")
     if list(model.modalities) != ["S2L2A"] or list(model.output_modalities) != ["tok_sen1grd@224"]:
@@ -23,11 +27,11 @@ def schedule_compatibility(model, *, token_steps):
     sampler = model.sampler
     original = sampler.generate
     previous = sampler.__dict__.get("generate",_MISSING)
-    receipt = {"id":COMPATIBILITY_ID,"baseline_label":BASELINE_LABEL,"calls":0,
+    receipt: Metadata = {"id":COMPATIBILITY_ID,"baseline_label":BASELINE_LABEL,"calls":0,
                "token_steps":token_steps,"applied":False,"method_restored":False}
 
-    def generate(this, mod_dict, schedule, top_k=0., top_p=0., tokenizer=None,
-                 verbose=False, seed=None, num_tokens=None):
+    def generate(this: Any, mod_dict: dict[str, Metadata], schedule: list[Metadata], top_k: float=0., top_p: float=0., tokenizer: Any=None,
+                 verbose: bool=False, seed: int | None=None, num_tokens: int | None=None) -> dict[str, Metadata]:
         if num_tokens != 196 or len(schedule) != token_steps:
             raise ValueError("Unexpected total-token override or schedule length")
         if tuple(mod_dict["tok_sen1grd@224"]["tensor"].shape) != (1,196):
@@ -46,8 +50,8 @@ def schedule_compatibility(model, *, token_steps):
         forwarded = None if token_steps == 8 else num_tokens
         receipt.update(calls=receipt["calls"]+1,applied=token_steps==8,
                        schedule_counts=counts,received_num_tokens=int(num_tokens),forwarded_num_tokens=forwarded)
-        return original(mod_dict,schedule,top_k=top_k,top_p=top_p,tokenizer=tokenizer,
-                        verbose=verbose,seed=seed,num_tokens=forwarded)
+        return cast("dict[str, Metadata]", original(mod_dict,schedule,top_k=top_k,top_p=top_p,tokenizer=tokenizer,
+                        verbose=verbose,seed=seed,num_tokens=forwarded))
 
     sampler.generate = types.MethodType(generate,sampler)
     try:

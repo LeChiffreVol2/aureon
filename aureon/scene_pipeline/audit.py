@@ -1,5 +1,11 @@
 """Independent CPU audit of a completed scene job; never imports a model runtime."""
 
+from __future__ import annotations
+from typing import Any, cast
+from ..value_types import Pathish, FloatArray, JsonObject
+from ..recipe import SegmentationResult
+
+
 import argparse
 from datetime import datetime, timezone
 import hashlib
@@ -18,7 +24,7 @@ REQUIRED = {"launch.json", "input-manifest.json", "tile-plan.json", "normalized_
             "parity.json", "artifacts/receipt.json", "artifacts/class_map.tif", "artifacts/valid_mask.tif"}
 
 
-def _sha(path):
+def _sha(path: Pathish) -> str:
     digest = hashlib.sha256()
     with Path(path).open("rb") as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
@@ -26,12 +32,12 @@ def _sha(path):
     return digest.hexdigest()
 
 
-def _canonical_hash(value):
+def _canonical_hash(value: object) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"),
                                     allow_nan=False).encode()).hexdigest()
 
 
-def _member(root, name):
+def _member(root: Path, name: str) -> Path:
     if (not isinstance(name, str) or "\\" in name or not name
             or PurePosixPath(name).is_absolute() or PureWindowsPath(name).is_absolute()
             or ".." in PurePosixPath(name).parts):
@@ -42,14 +48,14 @@ def _member(root, name):
     return path
 
 
-def _json(path):
+def _json(path: Pathish) -> Any:
     path = Path(path)
     if not 0 < path.stat().st_size <= 16 * 1024 * 1024:
         raise ValueError("JSON evidence must be bounded")
-    return json.loads(path.read_text(encoding="utf-8"))
+    return cast(JsonObject, json.loads(path.read_text(encoding="utf-8")))
 
 
-def _declared_source(path):
+def _declared_source(path: str) -> Path:
     """Translate only an explicitly recorded Windows/WSL drive path."""
     if not isinstance(path, str) or not path:
         raise ValueError("Missing declared source path")
@@ -64,23 +70,23 @@ def _declared_source(path):
     return result
 
 
-def _assert(condition, message):
+def _assert(condition: object, message: str) -> None:
     if not condition:
         raise ValueError(message)
 
 
-def _number(value):
+def _number(value: object) -> float:
     _assert(not isinstance(value, bool) and isinstance(value, (int, float))
             and math.isfinite(value) and value >= 0, "Expected finite nonnegative accounting value")
-    return float(value)
+    return float(cast(float, value))
 
 
-def _counter(value):
+def _counter(value: object) -> int:
     _assert(type(value) is int and value >= 0, "Expected nonnegative integer execution counter")
-    return value
+    return cast(int, value)
 
 
-def _audit_group_accounting(job, groups, provenance, tile_count):
+def _audit_group_accounting(job: JsonObject, groups: list[JsonObject], provenance: JsonObject, tile_count: int) -> int:
     """Verify declared dispatch and logical forwards without importing a runtime.
 
     Historical receipts without adapter metadata retain fixed-eight padding.
@@ -93,7 +99,7 @@ def _audit_group_accounting(job, groups, provenance, tile_count):
     _assert(len(groups) == len(expected_groups) == _counter(job["groups"]), "Group count mismatch")
     has_before, has_after = "adapter_before_job" in job, "adapter_after_job" in job
     _assert(has_before == has_after, "Both adapter accounting snapshots are required")
-    before, after = job.get("adapter_before_job"), job.get("adapter_after_job")
+    before, after = cast(JsonObject, job.get("adapter_before_job")), cast(JsonObject, job.get("adapter_after_job"))
     if has_before:
         _assert(isinstance(before, dict) and isinstance(after, dict), "Invalid adapter accounting snapshots")
     tail_name = "FullEightEagerTailAdapter"
@@ -147,11 +153,11 @@ def _audit_group_accounting(job, groups, provenance, tile_count):
     return padding
 
 
-def _near(actual, expected, message, *, abs_tol=1e-9):
+def _near(actual: object, expected: object, message: str, *, abs_tol: float=1e-9) -> None:
     _assert(math.isclose(_number(actual), _number(expected), rel_tol=1e-9, abs_tol=abs_tol), message)
 
 
-def _parity(eager, candidate):
+def _parity(eager: FloatArray, candidate: FloatArray) -> JsonObject:
     _assert(eager.shape == candidate.shape and eager.dtype == candidate.dtype == np.float32
             and eager.ndim == 4 and 1 <= len(eager) <= 36
             and eager.shape[1:] == (10, 224, 224), "Invalid saved logit arrays")
@@ -171,7 +177,7 @@ def _parity(eager, candidate):
             "bitwise_equal": eager.tobytes() == candidate.tobytes(), "tile_count": len(eager)}
 
 
-def _inspect(job_dir):
+def _inspect(job_dir: Path) -> JsonObject:
     import rasterio
     from ..recipe import INPUT_UNITS, S2_BANDS, segment_tiled, tile_anchors
     from .georaster import read_s2_geotiff
@@ -222,7 +228,7 @@ def _inspect(job_dir):
     _assert(_member(manifest_root, str(relative_raster)).resolve() == raster_path.resolve(),
             "Declared raster cannot locate the original manifest directory")
     declarations = []
-    def collect(value):
+    def collect(value: object) -> None:
         if isinstance(value, dict):
             if "path" in value and "sha256" in value:
                 declarations.append(value)
@@ -265,9 +271,9 @@ def _inspect(job_dir):
     _assert(plan["windows"] == [list(window) for window in windows] and len(windows) == len(tiles), "Tile plan differs")
     _assert(hashlib.sha256(tiles.tobytes(order="C")).hexdigest() == plan["input_array_sha256"], "Normalized array digest mismatch")
 
-    def replay(logits):
+    def replay(logits: FloatArray) -> SegmentationResult:
         position = 0
-        def saved(values):
+        def saved(values: FloatArray) -> FloatArray:
             nonlocal position
             end = position + len(values)
             _assert(np.array_equal(values, tiles[position:end]), "Independent recipe normalization or tile order differs")
@@ -340,7 +346,7 @@ def _inspect(job_dir):
             "original_manifest_scope": "Exact original manifest raw bytes rehashed and cross-checked among launch, job and delivery receipts."}
 
 
-def audit_job(job_dir, output_path):
+def audit_job(job_dir: Pathish, output_path: Pathish) -> JsonObject:
     job_dir, output_path = Path(job_dir).resolve(strict=True), Path(output_path).absolute()
     if not job_dir.is_dir() or not output_path.parent.is_dir():
         raise ValueError("Existing job directory and output parent required")
@@ -361,7 +367,7 @@ def audit_job(job_dir, output_path):
     return report
 
 
-def main(argv=None):
+def main(argv: list[str] | None=None) -> int:
     parser = argparse.ArgumentParser(description="Offline CPU audit of a completed AUREON scene job")
     parser.add_argument("--job", required=True)
     parser.add_argument("--output", required=True)

@@ -3,6 +3,13 @@
 SQLite/local files implement the LOCAL adapter only. They must not be mounted
 across serverless replicas. No provider network access or GPU imports occur here.
 """
+from __future__ import annotations
+from collections.abc import Callable, Iterator, Mapping, Sequence
+from typing import BinaryIO, cast
+from .io_types import RasterioInspection
+from .contracts import (ControlContract, HealthReport, Qualification, QualificationBinding,
+                        UploadBody, UploadFile)
+from ..serving.contracts import PathInput, BaseLease, BaseRequest
 from contextlib import contextmanager
 import base64
 import hashlib
@@ -19,49 +26,26 @@ import time
 import uuid
 
 from ..client import _decode, ClientError
-from ..scene_api.durable import _plain_path, _sync_dir
+from ..scene_api.durable import _plain_path as _plain_path, _sync_dir as _sync_dir
 
-MODEL = 'kao-terramind-b'
-PROFILE = 'fake-control-v1'
+from .contracts import (MODEL as MODEL, PROFILE as PROFILE, CONTRACT as CONTRACT,
+                        Error as Error, encoded as encoded, require as require)
+
 IDENTIFIER = re.compile(r'[0-9a-f]{32}\Z')
 NAME = re.compile(r'[a-zA-Z0-9][a-zA-Z0-9_.-]{0,79}\Z')
 SHA = re.compile(r'[0-9a-f]{64}\Z')
-CONTRACT = {'schema': 'aureon.cloud.local.v1', 'model': MODEL, 'profile': PROFILE,
-            'execution': 'fake', 'max_active': 3, 'max_running': 1, 'max_attempts': 3,
-            'max_file_bytes': 1024**3, 'max_source_bytes': 1024**3, 'prepared_reserve_bytes': 1024**3,
-            'max_tenant_storage_reservation_bytes': 2*1024**3,
-            'max_global_storage_reservation_bytes': 8*1024**3, 'max_rows': 10000,
-            'max_artifact_bytes': 16*1024**2, 'max_result_bytes': 64*1024**2,
-            'input_ttl_seconds': 3600, 'output_ttl_seconds': 3600, 'ticket_seconds': 300,
-            'lease_seconds': 60, 'min_free_bytes': 32*1024**3}
 
 
-class Error(ValueError):
-    def __init__(self, status, code, message, details=None):
-        super().__init__(message)
-        self.status, self.code = status, code
-        self.details = details
-
-
-def encoded(value):
-    return json.dumps(value, sort_keys=True, separators=(',', ':'), allow_nan=False).encode()
-
-
-def digest(value):
+def digest(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
 
 
-def file_hash(path):
+def file_hash(path: Path) -> str:
     with path.open('rb') as stream:
         return hashlib.file_digest(stream, 'sha256').hexdigest()
 
 
-def require(condition, code='invalid_request', status=400):
-    if not condition:
-        raise Error(status, code, code.replace('_', ' '))
-
-
-def write_file(path, data):
+def write_file(path: Path, data: bytes) -> None:
     _plain_path(path)
     with path.open('xb') as stream:
         stream.write(data)
@@ -70,32 +54,34 @@ def write_file(path, data):
     _sync_dir(path.parent)
 
 
-def tenant_storage_limit(value):
+def tenant_storage_limit(value: object) -> int:
     """Validate an explicit reservation budget without changing the global cap."""
     require(type(value) is int and 0 < value <= CONTRACT['max_global_storage_reservation_bytes'],
             'invalid_tenant_storage_reservation')
-    return value
+    return cast(int, value)
 
 
-def initialize(root, tenants, *, qualification=None, qualification_verifier=None,
-               tenant_storage_reservation_bytes=None):
+def initialize(root: PathInput, tenants: Sequence[str], *, qualification: Qualification | None = None,
+               qualification_verifier: Callable[[Qualification], Qualification] | None = None,
+               tenant_storage_reservation_bytes: int | None = None, tenant_capacity: int = 16) -> dict[str, str]:
     """Create explicit local credentials once; return plaintext only to caller."""
     root = _plain_path(root)
     require(not root.exists() and root.parent.is_dir(), 'fresh_state_required')
-    require(1 <= len(tenants) <= 16 and len(set(tenants)) == len(tenants)
+    require(type(tenant_capacity) is int and 1<=tenant_capacity<=2**31, 'invalid_tenant_capacity')
+    require(1 <= len(tenants) <= tenant_capacity and len(set(tenants)) == len(tenants)
             and all(isinstance(n, str) and NAME.fullmatch(n) for n in tenants), 'invalid_tenants')
     limit = tenant_storage_limit(CONTRACT['max_tenant_storage_reservation_bytes']
                                  if tenant_storage_reservation_bytes is None else tenant_storage_reservation_bytes)
     root.mkdir(mode=0o700)
     for name in ('inputs', 'results'):
         (root/name).mkdir(mode=0o700)
-    contract = dict(CONTRACT)
+    contract = CONTRACT.copy()
     contract['max_tenant_storage_reservation_bytes'] = limit
     if qualification is not None:
         from .profiles import verify_qualification
         (qualification_verifier or verify_qualification)(qualification)
         qualification_bytes = encoded(qualification)
-        contract.update(execution='real',profile=qualification['profile_id'],qualification_sha256=digest(qualification_bytes))
+        contract.update({'execution':'real','profile':qualification['profile_id'],'qualification_sha256':digest(qualification_bytes)})
         write_file(root/'qualification.json',qualification_bytes)
     write_file(root/'contract.json', encoded(contract))
     write_file(root/'secret.key', secrets.token_bytes(32))
@@ -130,11 +116,11 @@ def initialize(root, tenants, *, qualification=None, qualification_verifier=None
 
 
 class Control:
-    def __init__(self, root, *, clock=time.time, qualification_verifier=None):
+    def __init__(self, root: PathInput, *, clock: Callable[[], float] = time.time, qualification_verifier: Callable[[Qualification], Qualification] | None = None) -> None:
         self.root = _plain_path(root).resolve(strict=True)
         self.clock, self.lock = clock, threading.RLock()
-        self.contract = _decode((self.root/'contract.json').read_bytes())
-        self.qualification = None
+        self.contract: ControlContract = cast(ControlContract,_decode((self.root/'contract.json').read_bytes()))
+        self.qualification: QualificationBinding | None = None
         expected = self._expected_contract(qualification_verifier)
         require(self.contract == expected, 'state_contract_mismatch', 409)
         self.execution, self.profile = self.contract['execution'], self.contract['profile']
@@ -144,23 +130,23 @@ class Control:
         self.db.row_factory = sqlite3.Row
         self.db.execute('PRAGMA synchronous=FULL')
 
-    def _expected_contract(self, qualification_verifier):
+    def _expected_contract(self, qualification_verifier: Callable[[Qualification], Qualification] | None) -> ControlContract:
         """Extension boundary for a separately validated, persisted service route."""
-        expected = dict(CONTRACT)
+        expected = CONTRACT.copy()
         expected['max_tenant_storage_reservation_bytes'] = tenant_storage_limit(
             self.contract.get('max_tenant_storage_reservation_bytes'))
         if self.contract.get('execution')=='real':
             from .profiles import verify_qualification
             raw = (self.root/'qualification.json').read_bytes()
-            self.qualification = {'record':(qualification_verifier or verify_qualification)(_decode(raw)), 'sha256':digest(raw)}
-            expected.update(execution='real',profile=self.qualification['record']['profile_id'],qualification_sha256=digest(raw))
+            self.qualification = {'record':(qualification_verifier or verify_qualification)(cast(Qualification,_decode(raw))), 'sha256':digest(raw)}
+            expected.update({'execution':'real','profile':cast(QualificationBinding, self.qualification)['record']['profile_id'],'qualification_sha256':digest(raw)})
         return expected
 
-    def close(self):
+    def close(self) -> None:
         self.db.close()
 
     @contextmanager
-    def tx(self):
+    def tx(self) -> Iterator[sqlite3.Connection]:
         with self.lock:
             self.db.execute('BEGIN IMMEDIATE')
             try:
@@ -170,14 +156,14 @@ class Control:
                 self.db.rollback()
                 raise
 
-    def authenticate(self, key):
+    def authenticate(self, key: str) -> str:
         require(isinstance(key, str) and 32 <= len(key) <= 128, 'unauthorized', 401)
         with self.lock:
             row = self.db.execute('SELECT tenant FROM credentials WHERE hash=?', (digest(key.encode()),)).fetchone()
         require(row is not None, 'unauthorized', 401)
-        return row['tenant']
+        return cast(str, row['tenant'])
 
-    def capabilities(self):
+    def capabilities(self) -> dict[str, object]:
         return {'model_id':MODEL,'profile_id':self.profile,'execution':self.execution,
                 'qualification_sha256':self.contract.get('qualification_sha256'),
                 'cancellation':{'allowed_states':['queued'],'replay_state':'cancelled',
@@ -186,7 +172,7 @@ class Control:
                 'max_attempts':CONTRACT['max_attempts'],'lease_seconds':CONTRACT['lease_seconds'],
                 'per_job_numerical_status':'not_evaluated'}
 
-    def health(self):
+    def health(self) -> HealthReport:
         """Control-plane checks only; no model import, probe job or worker claim."""
         checks={}
         try:
@@ -213,7 +199,7 @@ class Control:
                                'Transaction availability and directory checks do not attest every future write'],
                 'action':None if ready else 'Operator must inspect control storage/contract/database; retry only after recovery'}
 
-    def status_snapshot(self, tenant):
+    def status_snapshot(self, tenant: str) -> dict[str, object]:
         """Bounded aggregates for the authenticated tenant; no global activity."""
         now=self.clock()
         with self.tx() as db:
@@ -243,19 +229,19 @@ class Control:
             'admission':{'reasons':reasons,'scope':'Own reservations only; shared admission constraints are rechecked atomically on submission'},
             'capabilities':self.capabilities(),'health':self.health()}
 
-    def _owned(self, db, table, tenant, identifier):
+    def _owned(self, db: sqlite3.Connection, table: str, tenant: str, identifier: str) -> sqlite3.Row:
         require(isinstance(identifier, str) and IDENTIFIER.fullmatch(identifier), 'not_found', 404)
         assert table in ('inputs', 'jobs')
         row = db.execute(f'SELECT * FROM {table} WHERE id=? AND tenant=?', (identifier, tenant)).fetchone()
         require(row is not None, 'not_found', 404)
-        return row
+        return cast(sqlite3.Row, row)
 
-    def _ticket(self, tenant, purpose, identifier, name, expires):
+    def _ticket(self, tenant: str, purpose: str, identifier: str, name: str, expires: int) -> str:
         body = encoded([tenant, purpose, identifier, name, expires])
         raw = base64.urlsafe_b64encode(body).decode().rstrip('=')
         return raw+'.'+hmac.new(self.secret, raw.encode(), hashlib.sha256).hexdigest()
 
-    def _check_ticket(self, ticket, tenant, purpose, identifier, name):
+    def _check_ticket(self, ticket: str, tenant: str, purpose: str, identifier: str, name: str) -> None:
         try:
             raw, signature = ticket.split('.')
             expected = hmac.new(self.secret, raw.encode(), hashlib.sha256).hexdigest()
@@ -266,15 +252,15 @@ class Control:
             valid = False
         require(valid, 'invalid_or_expired_ticket', 403)
 
-    def _folder(self, kind, identifier):
+    def _folder(self, kind: str, identifier: str) -> Path:
         require(IDENTIFIER.fullmatch(identifier) is not None, 'invalid_identity')
         return _plain_path(self.root/kind/identifier)
 
-    def create_input(self, tenant, body):
+    def create_input(self, tenant: str, body: UploadBody) -> dict[str, object]:
         files = self._validate_input(body)
         return self._reserve_input(tenant, body, files)
 
-    def _validate_input(self, body):
+    def _validate_input(self, body: UploadBody) -> list[UploadFile]:
         require(isinstance(body, dict) and set(body) == {'files','spec'})
         files, spec = body['files'], body['spec']
         require(isinstance(files, list) and 1 <= len(files) <= 14 and isinstance(spec, dict))
@@ -297,24 +283,27 @@ class Control:
             require(isinstance(spec.get('bands'), dict), 'invalid_bands')
             radiometry = spec.get('radiometry')
             require(isinstance(radiometry, dict) and set(radiometry) <= {'quantification_value','offsets','product_metadata'}, 'invalid_radiometry')
-            references = list(spec['bands'].values()) + [spec.get('scl')]
+            references = list(cast(dict[str, str], spec['bands']).values()) + [spec.get('scl')]
+            radiometry = cast(dict[str, object], radiometry)
             if 'product_metadata' in radiometry:
                 references.append(radiometry['product_metadata'])
         require(all(isinstance(n, str) and n in names for n in references)
                 and set(references) == set(names), 'file_references_must_be_uploaded_names')
-        spectral = references[:-1] if spec.get('kind')=='l2a' and 'product_metadata' in spec['radiometry'] else references
+        typed_references = cast(list[str], references)  # All references passed the str/uploaded-name guard.
+        spectral = typed_references[:-1] if spec.get('kind')=='l2a' and 'product_metadata' in cast(dict[str, object], spec['radiometry']) else typed_references
         require(all(n.endswith('.tif') for n in spectral), 'rasters_must_be_tiff')
         if len(spectral) != len(references):
-            require(references[-1].endswith('.xml'), 'metadata_must_be_xml')
+            require(typed_references[-1].endswith('.xml'), 'metadata_must_be_xml')
         return files
 
-    def _reserve_input(self, tenant, body, files):
+    def _reserve_input(self, tenant: str, body: UploadBody, files: list[UploadFile]) -> dict[str, object]:
         total, now, identifier = sum(f['bytes'] for f in files), self.clock(), uuid.uuid4().hex
         require(total <= CONTRACT['max_source_bytes'], 'source_byte_quota', 429)
         reservation = total+CONTRACT['prepared_reserve_bytes']
         with self.tx() as db:
             self._admit(db)
-            for scope, args, limit in [('tenant=? AND', (tenant,), self.contract['max_tenant_storage_reservation_bytes']), ('', (), CONTRACT['max_global_storage_reservation_bytes'])]:
+            capacity=self._input_capacity()
+            for scope, args, limit in [('tenant=? AND', (tenant,), capacity['tenant_bytes']), ('', (), capacity['global_bytes'])]:
                 used = db.execute(f'SELECT COALESCE(SUM(bytes),0) FROM inputs WHERE {scope} state != "expired"', args).fetchone()[0]
                 if used+reservation > limit:
                     details={'scope':'tenant','used_bytes':used,'limit_bytes':limit,'requested_reservation_bytes':reservation} if scope else {'scope':'service'}
@@ -325,7 +314,7 @@ class Control:
             paths = [self.root] + ([Path('/mnt/c')] if Path('/mnt/c').is_dir() else [])
             require(min(shutil.disk_usage(p).free for p in paths) >= CONTRACT['min_free_bytes']+used+reservation,
                     'storage_capacity', 429)
-            require(db.execute('SELECT COUNT(*) FROM inputs').fetchone()[0] < CONTRACT['max_rows'], 'input_count_quota', 429)
+            require(db.execute('SELECT COUNT(*) FROM inputs').fetchone()[0] < capacity['max_rows'], 'input_count_quota', 429)
             folder = self._folder('inputs', identifier)
             folder.mkdir(mode=0o700)
             (folder/'source').mkdir()
@@ -335,7 +324,7 @@ class Control:
                 [(identifier,f['name'],f['bytes'],f['sha256'],'pending') for f in files])
         return self.input(tenant, identifier)
 
-    def input(self, tenant, identifier):
+    def input(self, tenant: str, identifier: str) -> dict[str, object]:
         with self.tx() as db:
             row = self._owned(db, 'inputs', tenant, identifier)
             result = {k:row[k] for k in ('id','state','expires','error')}
@@ -352,7 +341,7 @@ class Control:
                     for f in db.execute('SELECT * FROM files WHERE input=?', (identifier,))]
             return result
 
-    def upload(self, tenant, identifier, name, ticket, stream, length):
+    def upload(self, tenant: str, identifier: str, name: str, ticket: str, stream: BinaryIO, length: int) -> dict[str, object]:
         self._check_ticket(ticket, tenant, 'upload', identifier, name)
         token = uuid.uuid4().hex
         with self.tx() as db:
@@ -392,7 +381,7 @@ class Control:
                 _plain_path(temporary).unlink()
         return {'uploaded': True, 'sha256':file['sha'], 'bytes':length}
 
-    def complete_input(self, tenant, identifier):
+    def complete_input(self, tenant: str, identifier: str) -> dict[str, object]:
         with self.tx() as db:
             row = self._owned(db,'inputs',tenant,identifier)
             require(row['expires'] > self.clock(), 'input_expired', 410)
@@ -404,7 +393,7 @@ class Control:
             db.execute('UPDATE inputs SET state="verifying" WHERE id=?', (identifier,))
         return {'id':identifier, 'state':'verifying'}
 
-    def prepare_one(self):
+    def prepare_one(self) -> bool:
         """CPU executor entry: validate only operator-owned staged files, no URLs."""
         with self.tx() as db:
             db.execute('UPDATE inputs SET state="rejected",error="validation_interrupted" WHERE state="validating" AND lease<=?', (self.clock(),))
@@ -436,35 +425,45 @@ class Control:
                 db.execute('UPDATE inputs SET state="rejected",error="input_validation_failed",token=NULL,lease=NULL WHERE id=? AND token=?', (identifier,token))
         return True
 
-    def _prepare_input(self, body, folder, token, identifier):
+    def _prepare_input(self, body: UploadBody, folder: Path, token: str, identifier: str) -> PathInput:
         from ..prepare import prepare_scene, check_scene
         spec = dict(body['spec'], scene_id=identifier)
         prepared = prepare_scene(spec, folder/('prepared-'+token), base_dir=folder/'source')
         check_scene(prepared['manifest'])
-        return prepared['manifest']
+        return cast(PathInput, prepared['manifest'])
 
-    def _inspect_uploaded_tiff(self,path):
-        import rasterio
+    def _inspect_uploaded_tiff(self, path: Path) -> None:
+        import rasterio as untyped_rasterio
+        rasterio=cast(RasterioInspection,untyped_rasterio)  # Third-party context/metadata surface only.
         with rasterio.open(path,driver='GTiff'):pass
 
-    def _terminal(self,db,identifier,state):
+    def _terminal(self, db: sqlite3.Connection, identifier: str, state: str) -> None:
         """Optional atomic usage/entitlement hook; never external payment I/O."""
         pass
 
-    def _validate_submission(self, body):
+    def _validate_submission(self, body: BaseRequest) -> None:
         require(isinstance(body, dict) and set(body) == {'input_id','model_id','profile_id'})
         require(body['model_id'] == MODEL and body['profile_id'] == self.profile, 'profile_not_available')
 
-    def _submitted(self, db, identifier, body):
+    def _submitted(self, db: sqlite3.Connection, identifier: str, body: BaseRequest) -> None:
         pass
 
-    def _admit(self, db):
+    def _admit(self, db: sqlite3.Connection) -> None:
         pass
 
-    def _can_claim(self, db):
+    def _can_claim(self, db: sqlite3.Connection) -> bool:
         return True
 
-    def submit(self, tenant, body, key):
+    def _input_capacity(self) -> dict[str, int]:
+        return {'tenant_bytes':self.contract['max_tenant_storage_reservation_bytes'],
+                'global_bytes':CONTRACT['max_global_storage_reservation_bytes'],'max_rows':CONTRACT['max_rows']}
+
+    def _submission_capacity(self, db: sqlite3.Connection, tenant: str) -> None:
+        """Called inside the submission transaction, only for a new idempotency key."""
+        require(db.execute('SELECT COUNT(*) FROM jobs').fetchone()[0] < CONTRACT['max_rows'], 'job_count_quota', 429)
+        require(db.execute('SELECT COUNT(*) FROM jobs WHERE state IN ("queued","running")').fetchone()[0] < CONTRACT['max_active'], 'queue_full', 429)
+
+    def submit(self, tenant: str, body: BaseRequest, key: str) -> dict[str, object]:
         self._validate_submission(body)
         require(isinstance(key,str) and 8 <= len(key) <= 128 and key.isascii() and all(32 <= ord(c) < 127 for c in key), 'invalid_idempotency_key')
         fingerprint, key_hash, now = digest(encoded(body)), digest(key.encode()), self.clock()
@@ -477,8 +476,7 @@ class Control:
                 self._admit(db)
                 source = self._owned(db,'inputs',tenant,body['input_id'])
                 require(source['state'] == 'ready' and source['expires'] > now, 'input_not_ready', 409)
-                require(db.execute('SELECT COUNT(*) FROM jobs').fetchone()[0] < CONTRACT['max_rows'], 'job_count_quota', 429)
-                require(db.execute('SELECT COUNT(*) FROM jobs WHERE state IN ("queued","running")').fetchone()[0] < CONTRACT['max_active'], 'queue_full', 429)
+                self._submission_capacity(db,tenant)
                 identifier, reused = uuid.uuid4().hex, False
                 db.execute('INSERT INTO jobs(id,tenant,input,key,request,state,created) VALUES (?,?,?,?,?,"queued",?)',
                            (identifier,tenant,body['input_id'],key_hash,fingerprint,now))
@@ -486,7 +484,7 @@ class Control:
                 self._submitted(db, identifier, body)
         return dict(self.job(tenant,identifier), reused=reused)
 
-    def job(self, tenant, identifier):
+    def job(self, tenant: str, identifier: str) -> dict[str, object]:
         with self.tx() as db:
             row = self._owned(db,'jobs',tenant,identifier)
             result = {k:row[k] for k in ('id','state','attempts','created','expires','error')}
@@ -498,7 +496,7 @@ class Control:
                 result['state'] = 'expired'
             return result
 
-    def cancel(self, tenant, identifier):
+    def cancel(self, tenant: str, identifier: str) -> dict[str, object]:
         with self.tx() as db:
             row = self._owned(db,'jobs',tenant,identifier)
             require(row['state'] in ('queued','cancelled'), 'cannot_cancel_running_or_terminal', 409)
@@ -508,7 +506,7 @@ class Control:
                 self._terminal(db,identifier,'cancelled')
         return self.job(tenant,identifier)
 
-    def claim(self):
+    def claim(self) -> BaseLease | None:
         with self.tx() as db:
             if not self._can_claim(db):
                 return None
@@ -534,19 +532,19 @@ class Control:
             db.execute('INSERT INTO attempts VALUES (?,?,"running",?,NULL)', (row['id'],attempt,now))
             return {'job_id':row['id'],'attempt':attempt,'token':token,'manifest':str(_plain_path(self.root/source['manifest']))}
 
-    def _fenced(self, db, lease):
+    def _fenced(self, db: sqlite3.Connection, lease: BaseLease) -> sqlite3.Row:
         row = db.execute('SELECT * FROM jobs WHERE id=?', (lease['job_id'],)).fetchone()
         require(row is not None and row['state']=='running' and row['attempts']==lease['attempt']
                 and hmac.compare_digest(row['token'] or '',digest(lease['token'].encode()))
                 and row['lease'] > self.clock(), 'stale_attempt', 409)
-        return row
+        return cast(sqlite3.Row, row)
 
-    def heartbeat(self, lease):
+    def heartbeat(self, lease: BaseLease) -> None:
         with self.tx() as db:
             self._fenced(db,lease)
             db.execute('UPDATE jobs SET lease=? WHERE id=?', (self.clock()+CONTRACT['lease_seconds'],lease['job_id']))
 
-    def publish_fake(self, lease):
+    def publish_fake(self, lease: BaseLease) -> dict[str, object]:
         """Explicit fake artifact, never a COG or a numerical parity assertion."""
         require(self.execution=='fake', 'fake_executor_not_allowed', 409)
         artifact = encoded({'schema':'aureon.simulation.v1','job_id':lease['job_id'],'attempt':lease['attempt'],
@@ -573,7 +571,7 @@ class Control:
             self._terminal(db,row['id'],'completed')
         return {'job_id':row['id'], 'state':'completed', 'model_executed':False}
 
-    def publish_real(self, lease, files):
+    def publish_real(self, lease: BaseLease, files: Mapping[str, PathInput]) -> dict[str, object]:
         require(self.execution=='real', 'real_executor_not_allowed', 409)
         require(set(files)=={'class_map.tif','valid_mask.tif','provenance.json','job.json'}, 'incomplete_artifacts', 409)
         payload = {}
@@ -586,9 +584,9 @@ class Control:
         require(receipt.get('schema')=='aureon.guarded_scene_job.v2' and receipt.get('status')=='completed'
                 and receipt.get('job_id')==lease['job_id'] and receipt.get('profile_id')==self.profile
                 and receipt.get('validation',{}).get('numerical',{}).get('status')=='not_evaluated'
-                and receipt['validation']['qualification']['sha256']==self.qualification['sha256']
-                and receipt['code_sha256']==self.qualification['record']['source_sha256']
-                and receipt['model_identity']['bundle_receipt_sha256']==self.qualification['record']['bundle_receipt_sha256'],
+                and receipt['validation']['qualification']['sha256']==cast(QualificationBinding, self.qualification)['sha256']
+                and receipt['code_sha256']==cast(QualificationBinding, self.qualification)['record']['source_sha256']
+                and receipt['model_identity']['bundle_receipt_sha256']==cast(QualificationBinding, self.qualification)['record']['bundle_receipt_sha256'],
                 'worker_receipt_mismatch', 409)
         require(provenance.get('schema')=='aureon.cloud.provenance.v2'
                 and provenance.get('validation')==receipt['validation'], 'provenance_mismatch', 409)
@@ -625,7 +623,7 @@ class Control:
             self._terminal(db,row['id'],'completed')
         return {'job_id':row['id'],'state':'completed','model_executed':True}
 
-    def fail(self, lease):
+    def fail(self, lease: BaseLease) -> None:
         with self.tx() as db:
             row = self._fenced(db,lease)
             db.execute('UPDATE jobs SET state="failed",error="execution_failed",expires=?,lease=NULL WHERE id=?',
@@ -635,7 +633,7 @@ class Control:
             db.execute('UPDATE outbox SET state="finished" WHERE job=?', (row['id'],))
             self._terminal(db,row['id'],'failed')
 
-    def artifacts(self, tenant, identifier):
+    def artifacts(self, tenant: str, identifier: str) -> dict[str, object]:
         with self.tx() as db:
             row = self._owned(db,'jobs',tenant,identifier)
             require(not row['expires'] or row['expires'] > self.clock(), 'output_expired', 410)
@@ -645,7 +643,7 @@ class Control:
                 'url':f'/v1/jobs/{identifier}/artifacts/{name}?ticket='+self._ticket(tenant,'download',identifier,name,expiry)}
                 for name,f in json.loads(row['result']).items()}}
 
-    def download(self, tenant, identifier, name, ticket):
+    def download(self, tenant: str, identifier: str, name: str, ticket: str) -> bytes:
         self._check_ticket(ticket,tenant,'download',identifier,name)
         with self.tx() as db:
             row = self._owned(db,'jobs',tenant,identifier)
@@ -659,7 +657,7 @@ class Control:
             require(len(data) == declaration['bytes'] and digest(data)==declaration['sha256'], 'artifact_integrity', 409)
             return data
 
-    def expire(self):
+    def expire(self) -> list[dict[str, str]]:
         """Explicit maintenance; owns only this new service's payload directories."""
         removed = []
         with self.tx() as db:

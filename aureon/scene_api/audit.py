@@ -4,6 +4,11 @@ No model runtime is imported. This verifies recorded evidence and its declared
 local trust scope; it cannot observe historical tensor values or establish
 remote attestation, a controlled shutdown, map accuracy, or speedup.
 """
+from __future__ import annotations
+from collections.abc import Sequence
+from typing import cast
+from ..value_types import JsonObject
+from ..serving.contracts import PathInput
 import argparse
 from datetime import datetime, timezone
 import json
@@ -28,20 +33,20 @@ _REQUIRED_SOURCES = {"aureon/scene_api/worker.py", "aureon/scene_api/identity.py
                      "aureon/scene_api/audit.py"}
 
 
-def _require(condition, message):
+def _require(condition: object, message: str) -> None:
     if not condition:
         raise ValueError(message)
 
 
-def _digest(value):
+def _digest(value: object) -> bool:
     return isinstance(value, str) and bool(_SHA.fullmatch(value))
 
 
-def _nonnegative(value):
-    return type(value) in (int, float) and math.isfinite(value) and value >= 0
+def _nonnegative(value: object) -> bool:
+    return type(value) in (int, float) and math.isfinite(cast(float,value)) and cast(float,value) >= 0
 
 
-def _resident_checks(folder, base_report):
+def _resident_checks(folder: Path, base_report: JsonObject) -> JsonObject:
     job_path = scene_audit._member(folder, "job.json")
     job_digest = scene_audit._sha(job_path)
     _require(base_report.get("job_receipt_sha256") == job_digest,
@@ -160,7 +165,7 @@ def _resident_checks(folder, base_report):
             "controlled_shutdown_verified": False, "remote_attestation": False}
 
 
-def audit_job(job_dir, output_path):
+def audit_job(job_dir: PathInput, output_path: PathInput) -> JsonObject:
     folder, output = Path(job_dir).resolve(strict=True), Path(output_path).absolute()
     if not folder.is_dir() or not output.parent.is_dir():
         raise ValueError("Existing job directory and output parent required")
@@ -174,7 +179,7 @@ def audit_job(job_dir, output_path):
         try:
             return audit_streaming_job(folder,output)
         except Exception as error:
-            report={'schema':'aureon.streaming_job_audit.v1','status':'failed',
+            report: JsonObject={'schema':'aureon.streaming_job_audit.v1','status':'failed',
                     'error_type':type(error).__name__,'error':str(error),'model_executed':False}
             with output.open('x') as stream:json.dump(report,stream,indent=2)
             return report
@@ -198,7 +203,7 @@ def audit_job(job_dir, output_path):
     return report
 
 
-def main(argv=None):
+def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Offline CPU audit of a completed resident AUREON scene job")
     parser.add_argument("--job", required=True)
     parser.add_argument("--output", required=True)

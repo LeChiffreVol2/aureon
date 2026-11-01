@@ -1,11 +1,13 @@
 """Runnable installed SDK example; assets and model execution are explicit."""
+from __future__ import annotations
+from collections.abc import Sequence
 import argparse
 from dataclasses import asdict
 import json
 from aureon.api import SceneRequest,run_scene
 
 
-def main(argv=None):
+def main(argv: Sequence[str] | None=None) -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ("manifest","bundle","output","model","profile"):
         parser.add_argument("--"+name,required=True)

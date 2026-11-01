@@ -25,6 +25,18 @@
 
 ---
 
+The locked main v0.1.0 package (`e09e710c…`) integrates features directly with the Best runtime
+derived from `0fa5ef2b…`. Its original run, owner thread, FP32 sampling, graph/reuse
+and cleanup are retained. Scenes, SDK/CLI, local HTTP and private Cloud consume
+that installed package; no model subprocess adapter or second wheel is required.
+
+Adding features changes the archive hash. The delivery receipt identifies the
+integrated wheel; `0fa5ef2b…` remains the immutable numerical/performance origin,
+not a second installation choice. Historical failed builds remain evidence.
+Published GitHub artifacts and historical comparison numbers remain unchanged.
+PyPI, hosted activation, deployment and publication remain closed.
+See the [selected installation guide](packaging/CANDIDATE-QUICKSTART.md).
+
 AUREON is an open-source inference engine built for **Generative Foundation Models
 for Earth Observation**, with support for the broader Earth foundation model family.
 Start with **TerraMind**: turn a prepared Sentinel-2 L2A crop into synthetic S1GRD
@@ -33,6 +45,28 @@ provenance. **KAO-TerraMind** adds dense-prediction workflows through the same E
 
 Use Python, CLI or an authenticated local API. The published v0.1.0 library runs
 on your own machine; the landing page describes the wider platform direction.
+
+Built on TerraTorch and PyTorch, AUREON brings input validation, resident
+inference and geospatial result delivery into one workflow.
+
+The local candidate also adds [bounded stage execution and remote replica
+contracts](packaging/SCALABLE-RUNTIME.md): typed job handles, resource credits,
+tenant fairness, durable leases and verified artifact delivery. Native hardware
+capability and numerical qualification are separate. These interfaces do not
+claim measured multi-GPU/multi-host scaling or change the published downloads.
+
+## Whole scenes and repeated jobs
+
+The [integrated workflow](packaging/BEST-WORKFLOWS.md) connects the unchanged
+numerical core to whole-scene delivery, resident sessions and bounded repeated
+jobs. **224x224 is a native tile size, not a scene-size limit.** Budgets, masks,
+coordinate seeds, cancellation, committed COG/provenance and recovery are explicit.
+Historical aliases remain compatible; no second package is needed.
+
+Acceptance receipts bind exact wheel bytes and tested routes. Historical
+performance figures retain their original experiment scope. Exact numerical
+parity does not establish seamless physical quality, long-load stability or
+physical multi-GPU speed.
 
 ## Why AUREON?
 
@@ -44,6 +78,11 @@ on your own machine; the landing page describes the wider platform direction.
 | **A workflow you can own** | Python, CLI and authenticated local HTTP, with separate locked dependency profiles and explicit model execution. |
 
 ## Supported workflows
+
+The local candidate adds [prepared-scene generation, DataLoader integration and
+read-only runtime diagnostics](packaging/PRODUCT-WORKFLOWS.md). Consult that guide
+for limits and artifact qualification; these additions are not in the original
+published alpha wheel.
 
 | Model | Task | Input → output | Start here |
 | --- | --- | --- | --- |
@@ -58,34 +97,11 @@ hardware and qualification. Generated S1GRD is synthetic imagery, not an observe
 
 **Linux x86_64 or WSL2 · Python 3.12 · NVIDIA GPU for model execution**
 
-The quickstart defaults to TerraMind generation. You need your own supported
-Sentinel-2 GeoTIFF input and two pinned model files (about 2.67 GB combined);
-dependencies and outputs need additional disk space. No image or model is bundled.
-See [prerequisites](packaging/START-HERE.md#before-you-start).
-
-1. Download the [v0.1.0 installation kit](https://github.com/LeChiffreVol2/aureon/releases/download/v0.1.0/aureon-0.1.0-public-alpha.zip).
-2. Verify and extract it using the commands below.
-3. Follow the [first-result guide](packaging/START-HERE.md) to install your dependency profile, supply model assets and prepare your input.
-
-<details>
-<summary><strong>Download and verify with the command line</strong></summary>
-
-```sh
-mkdir aureon-download && cd aureon-download
-curl -fL https://github.com/LeChiffreVol2/aureon/releases/download/v0.1.0/aureon-0.1.0-public-alpha.zip \
-  -o aureon-0.1.0-public-alpha.zip
-printf '%s  %s\n' '3e844b14ba7a4a8138a3386ab2dd928e426ffcbf018f3183acf91a854297db07' \
-  'aureon-0.1.0-public-alpha.zip' | sha256sum --check
-python3.12 -m zipfile -e aureon-0.1.0-public-alpha.zip .
-cd aureon-0.1.0-public-alpha
-sha256sum --check SHA256SUMS
-```
-
-The kit contains the wheel, matching source archive, examples, dependency locks
-and verifier. Use the release kit and its pins; weights, imagery and GPU drivers
-are supplied separately. [All release checksums →](docs/releases/v0.1.0.md)
-
-</details>
+Install the current local wheel using the [single distribution guide](packaging/CANDIDATE-QUICKSTART.md),
+then follow [input/asset preparation and generation](packaging/BEST-WORKFLOWS.md).
+The model/tokenizer and user imagery remain explicit assets and are not bundled.
+The [previous public alpha](https://github.com/LeChiffreVol2/aureon/releases/tag/v0.1.0)
+is retained unchanged; it is not this unpublished working delivery.
 
 After installation, inspect your environment without loading a model:
 
@@ -145,14 +161,16 @@ The [architecture guide](docs/ARCHITECTURE.md) explains the interfaces and resul
 
 ## Release status
 
-**v0.1.0 is a public alpha.** The official wheel passed local KAO-TerraMind B512 and
-TerraMind224 HTTP functional acceptance on RTX 3070 8 GiB / WSL: retained FP32
-reference parity, verified outputs, replay without additional inference or usage,
-and clean worker shutdown. [Scope and limitations →](docs/MODEL-SUPPORT.md)
+The current local **v0.1.0** distribution is the integrated best-core Engine
+described in the [installation guide](packaging/CANDIDATE-QUICKSTART.md).
+Its delivery receipt identifies one wheel/source pair, installed checks and the
+exact scope of model acceptance. There is no current alternative feature build.
 
-This release supports the documented local workflows. Hosted availability,
-production SLAs and broader hardware or scientific validation are outside this
-qualification. Exact parity establishes execution fidelity, not accuracy on new scenes.
+The original [published alpha](https://github.com/LeChiffreVol2/aureon/releases/tag/v0.1.0)
+remains unchanged. The original [performance evidence](docs/MODEL-SUPPORT.md#historical-performance-reference)
+also remains bound to its measured artifact, configuration and workload.
+Neither historical release files nor historical measurements are overwritten.
+No hosted API, production SLA or physical multi-GPU qualification is announced.
 
 ## Contributing
 
@@ -165,7 +183,6 @@ For installation problems, see [troubleshooting](packaging/SUPPORT.md).
 
 **AUREON Foundation by Norvique** is a project of **Norvique Company**.
 AUREON-owned contributions are licensed under [Apache-2.0](LICENSE).
-
 We acknowledge the work of KAO-TerraMind, TerraMind, TerraTorch and PyTorch.
 See [NOTICE](NOTICE), [third-party attribution](packaging/review/THIRD-PARTY-NOTICES.md)
 and [licensing scope](docs/RIGHTS.md) for details. Model weights and datasets

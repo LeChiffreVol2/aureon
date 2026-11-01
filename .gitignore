@@ -24,3 +24,14 @@ runs/
 *.sqlite*
 *.db
 credentials*.json
+
+# Internal development and research assets stay outside the public repository.
+/research/
+/preservation/
+/publication/
+/.scratch/
+/ui-evidence/
+/internal/
+
+# Private hosted product workspace
+/cloud/

@@ -8,6 +8,16 @@ actual KAO-TerraMind parity and timing require separate GPU measurements.
 Reference: https://docs.pytorch.org/docs/2.10/notes/cuda.html#cuda-graphs
 """
 
+from __future__ import annotations
+from typing import TYPE_CHECKING, Any, cast
+from types import ModuleType
+from .value_types import JsonObject, Pathish
+if TYPE_CHECKING:
+    from torch import Tensor, device
+    from torch.nn import Module
+    from torch.cuda import CUDAGraph, Stream
+
+
 from dataclasses import fields, is_dataclass, replace
 from datetime import datetime, timezone
 import hashlib
@@ -21,7 +31,7 @@ INPUT_SHAPE = (1, 12, 224, 224)
 OUTPUT_SHAPE = (1, 10, 224, 224)
 
 
-def _precision(torch):
+def _precision(torch: ModuleType) -> JsonObject:
     return {
         'float32_matmul_precision': torch.get_float32_matmul_precision(),
         'matmul_allow_tf32': bool(torch.backends.cuda.matmul.allow_tf32),
@@ -43,13 +53,20 @@ class FixedInputCudaGraph:
     lock plus stream dependencies protect shared graph buffers. Output tensors
     are cloned after every replay so callers never receive reusable storage.
     """
+    _graph: CUDAGraph | None
+    _static_input: Tensor | None
+    _static_result: Any  # TerraTorch ModelOutput or Tensor, runtime shape/dtype validated.
+    _capture_stream: Stream | None
+    _last_stream: Stream | None
+    _device: device | None
+    _error: Exception | None
 
-    def __init__(self, model, folder, *, rank=0, worker_record=None, torch_module=None):
+    def __init__(self, model: Module, folder: Pathish, *, rank: int=0, worker_record: JsonObject | None=None, torch_module: ModuleType | None=None) -> None:
         if torch_module is None:
             import torch as torch_module
         if model.training:
             raise ValueError('CUDA graph requires an eval-mode model')
-        self.torch = torch_module
+        self.torch = cast(ModuleType, torch_module)
         self.model = model
         self.original_forward = model.forward
         self.folder = Path(folder).resolve(strict=True)
@@ -75,7 +92,7 @@ class FixedInputCudaGraph:
         self._error = None
         self._event('armed', capture_phase='first_explicit_forward_after_vllm_startup')
 
-    def _event(self, event, **extra):
+    def _event(self, event: str, **extra: Any) -> None:
         self._event_count += 1
         value = {
             'schema': 'aureon.cuda_graph_event.v1', 'event': event,
@@ -97,7 +114,7 @@ class FixedInputCudaGraph:
             json.dump(value, stream, indent=2, allow_nan=False)
             stream.write('\n')
 
-    def _input(self, args, kwargs):
+    def _input(self, args: tuple[Any, ...], kwargs: dict[str, Any]) -> Tensor:
         if kwargs or len(args) != 1 or not isinstance(args[0], dict) or set(args[0]) != {'S2L2A'}:
             raise ValueError('CUDA graph accepts one positional dictionary containing S2L2A only')
         value = args[0]['S2L2A']
@@ -106,29 +123,29 @@ class FixedInputCudaGraph:
             raise ValueError('CUDA graph requires CUDA float32 S2L2A [1,12,224,224]')
         if self._device is not None and value.device != self._device:
             raise ValueError('CUDA graph input device changed')
-        return value
+        return cast("Tensor", value)
 
-    def _logits(self, result):
+    def _logits(self, result: Any) -> Tensor:
         if isinstance(result, self.torch.Tensor):
             output = result
         elif (is_dataclass(result) and {item.name for item in fields(result)} == {'output', 'auxiliary_heads'}
-              and result.auxiliary_heads in (None, {})):
-            output = result.output
+              and cast(Any, result).auxiliary_heads in (None, {})):
+            output = cast(Any, result).output
         else:
             raise ValueError('CUDA graph supports tensor logits or TerraTorch ModelOutput without auxiliary heads')
         if (not isinstance(output, self.torch.Tensor) or tuple(output.shape) != OUTPUT_SHAPE
                 or output.dtype != self.torch.float32 or not output.is_cuda or output.device != self._device):
             raise ValueError('CUDA graph requires CUDA float32 logits [1,10,224,224]')
-        return output
+        return cast("Tensor", output)
 
-    def _capture(self, value):
+    def _capture(self, value: Tensor) -> None:
         torch = self.torch
         self.state = 'capturing'
         self._device = value.device
         self._static_input = value.detach().clone()
         current = torch.cuda.current_stream(self._device)
         self._capture_stream = torch.cuda.Stream(device=self._device)
-        self._capture_stream.wait_stream(current)
+        cast("Stream", self._capture_stream).wait_stream(current)
         began = perf_counter()
         self._event('capture-started', warmup_forwards=3)
         with torch.cuda.stream(self._capture_stream):
@@ -136,18 +153,18 @@ class FixedInputCudaGraph:
                 self._logits(self.original_forward({'S2L2A': self._static_input}))
         # Warmup finishes before capture; this synchronization is outside all
         # graph work and outside subsequent replay-only requests.
-        self._capture_stream.synchronize()
+        cast("Stream", self._capture_stream).synchronize()
         self._graph = torch.cuda.CUDAGraph()
         with torch.cuda.graph(self._graph, stream=self._capture_stream, capture_error_mode='global'):
             self._static_result = self.original_forward({'S2L2A': self._static_input})
             self._logits(self._static_result)
-        current.wait_stream(self._capture_stream)
+        current.wait_stream(cast("Stream", self._capture_stream))
         self.capture_count += 1
         self.state = 'captured'
         self._last_stream = current
         self._event('captured', warmup_forwards=3, warmup_and_capture_host_seconds=perf_counter() - began)
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
         with self._lock, self.torch.inference_mode():
             # Device identity can become fixed during the first capture on
             # another caller. Validate only after taking the same buffer lock.
@@ -162,8 +179,8 @@ class FixedInputCudaGraph:
                 current = self.torch.cuda.current_stream(self._device)
                 if self._last_stream is not None and current != self._last_stream:
                     current.wait_stream(self._last_stream)
-                self._static_input.copy_(value)
-                self._graph.replay()
+                cast("Tensor", self._static_input).copy_(value)
+                cast("CUDAGraph", self._graph).replay()
                 cloned = self._logits(self._static_result).clone()
                 self._last_stream = current
                 self.replay_count += 1
@@ -175,7 +192,7 @@ class FixedInputCudaGraph:
                     self._event('first-replay-completed')
                 if isinstance(self._static_result, self.torch.Tensor):
                     return cloned
-                auxiliary = None if self._static_result.auxiliary_heads is None else {}
+                auxiliary: dict[str, Any] | None = None if self._static_result.auxiliary_heads is None else {}
                 return replace(self._static_result, output=cloned, auxiliary_heads=auxiliary)
             except Exception as exc:
                 self.state = 'failed'
@@ -184,11 +201,11 @@ class FixedInputCudaGraph:
                 raise RuntimeError('CUDA graph capture/replay failed; eager fallback is disabled') from exc
 
 
-def install_cuda_graph(model, folder, *, rank=0, worker_record=None, torch_module=None):
+def install_cuda_graph(model: Module, folder: Pathish, *, rank: int=0, worker_record: JsonObject | None=None, torch_module: ModuleType | None=None) -> FixedInputCudaGraph:
     """Install only after verification and startup, with no immediate GPU work."""
     if hasattr(model, '_aureon_cuda_graph'):
         raise ValueError('CUDA graph wrapper is already installed')
     controller = FixedInputCudaGraph(model, folder, rank=rank, worker_record=worker_record, torch_module=torch_module)
     model.forward = controller
-    model._aureon_cuda_graph = controller
+    cast(Any, model)._aureon_cuda_graph = controller
     return controller

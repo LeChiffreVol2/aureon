@@ -12,11 +12,13 @@ from urllib.parse import unquote
 
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC_FILES = {
+    '.github/workflows/cpu.yml',
     'README.md', 'LICENSE', 'NOTICE', 'SECURITY.md', 'CONTRIBUTING.md', '.gitignore', '.gitattributes',
     'docs/README.md', 'docs/MODEL-SUPPORT.md', 'docs/RIGHTS.md', 'docs/releases/v0.1.0.md',
     'docs/ARCHITECTURE.md', 'docs/assets/aureon-banner.svg',
     'docs/CPU-WALKTHROUGH.md', 'examples/generation/cpu_walkthrough.py',
     'release/v0.1.0.json', 'tools/check_public_source.py',
+    'tools/check_selected_engine.py', 'tools/test_selected_engine.py', 'packaging/review/SELECTED-ENGINE.json',
     '.github/ISSUE_TEMPLATE/bug_report.md', '.github/ISSUE_TEMPLATE/feature_request.md',
     '.github/ISSUE_TEMPLATE/config.yml', '.github/pull_request_template.md',
 }
@@ -67,7 +69,7 @@ def main():
         text = path.read_text(encoding='utf-8')
         # Real credential-shaped strings and personal checkout paths are excluded.
         assert not re.search(r'(?:sk-[A-Za-z0-9_-]{24,}|hf_[A-Za-z0-9]{24,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----)', text), name
-        if path.suffix == '.py':
+        if path.suffix in {'.py', '.pyi'}:
             ast.parse(text, filename=name)
             python_count += 1
         if path.suffix == '.md' or path.name == 'NOTICE':
@@ -89,7 +91,8 @@ def main():
                     assert unquote(fragment) in anchors, (name, href)
                 link_count += 1
     manifest = json.loads((ROOT / 'release/v0.1.0.json').read_text(encoding='utf-8'))
-    assert set(runtime) == set(manifest['runtime_payloads'])
+    if args.verify_release_runtime:
+        assert set(runtime) == set(manifest['runtime_payloads']), 'Current source differs from the original release; use its immutable tag for exact identity checks.'
     for name, expected in manifest['dependency_locks'].items():
         if args.verify_release_runtime:
             assert digest(ROOT / name) == expected, name

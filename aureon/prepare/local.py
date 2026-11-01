@@ -6,6 +6,16 @@ No remote access, SAFE discovery, reprojection across CRS, or model execution.
 Radiometry and band mapping are caller declarations; optional product XML can
 corroborate the radiometric numbers, not the provenance of supplied pixels.
 """
+
+from __future__ import annotations
+from collections.abc import Callable, Iterator, Mapping
+from typing import TYPE_CHECKING, cast
+from ..value_types import Pathish, FloatArray, BoolArray, ClassArray, JsonObject
+if TYPE_CHECKING:
+    from affine import Affine
+    from rasterio.io import DatasetReader
+    from rasterio.windows import Window
+
 from contextlib import ExitStack
 from datetime import datetime, timezone
 import hashlib
@@ -30,11 +40,11 @@ EXCLUDED_SCL = (0, 1, 3, 8, 9, 10, 11)
 XML_IDS = dict(zip(S2_BANDS, (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12)))
 
 
-def canonical(value):
+def canonical(value: object) -> bytes:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
 
 
-def file_hash(path):
+def file_hash(path: Pathish) -> str:
     value = hashlib.sha256()
     with Path(path).open("rb") as stream:
         for chunk in iter(lambda: stream.read(1024**2), b""):
@@ -42,7 +52,7 @@ def file_hash(path):
     return value.hexdigest()
 
 
-def local_file(value, base):
+def local_file(value: object, base: Path) -> Path:
     if not isinstance(value, (str, Path)) or not str(value) or "://" in str(value) or str(value).startswith("/vsi"):
         raise ValueError("Supply local files, not URLs or GDAL virtual paths")
     path = Path(value)
@@ -52,21 +62,21 @@ def local_file(value, base):
     return path
 
 
-def read_json(path):
+def read_json(path: Path) -> object:
     if not 0 < path.stat().st_size <= 1024**2:
         raise ValueError("JSON must be nonempty and at most 1 MiB")
-    def unique(pairs):
+    def unique(pairs: list[tuple[str, object]]) -> dict[str, object]:
         result = {}
         for key, value in pairs:
             if key in result:
                 raise ValueError("Duplicate JSON key: " + key)
             result[key] = value
         return result
-    return json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=unique,
-                      parse_constant=lambda value: (_ for _ in ()).throw(ValueError("Nonfinite JSON")))
+    return cast(object, json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=unique,
+                      parse_constant=lambda value: (_ for _ in ()).throw(ValueError("Nonfinite JSON"))))
 
 
-def load_spec(value, base_dir=None):
+def load_spec(value: object, base_dir: Pathish | None=None) -> tuple[JsonObject, dict[str, Path], Path]:
     base = Path(base_dir or Path.cwd()).resolve(strict=True)
     if isinstance(value, (str, Path)):
         path = local_file(value, base)
@@ -103,7 +113,7 @@ def load_spec(value, base_dir=None):
     return spec, files, base
 
 
-def identity(dataset, path):
+def identity(dataset: DatasetReader, path: Path) -> JsonObject:
     sources = {local_file(name, path.parent) for name in dataset.files} | {path}
     if len(sources) > 9 or any(member.parent != path.parent for member in sources):
         raise ValueError("At most eight supporting files beside each GeoTIFF are supported")
@@ -112,7 +122,7 @@ def identity(dataset, path):
                                  for p in sorted(sources - {path})]}
 
 
-def grid(dataset, expected):
+def grid(dataset: DatasetReader, expected: str) -> JsonObject:
     import rasterio
     if dataset.driver != "GTiff" or dataset.crs != rasterio.crs.CRS.from_user_input(expected):
         raise ValueError("Local GeoTIFFs must match expected_crs; JP2/SAFE/VRT and cross-CRS reprojection are unsupported")
@@ -130,7 +140,7 @@ def grid(dataset, expected):
             "transform": list(t)[:6], "decoder_block_bytes_upper_bound": block_bytes}
 
 
-def crop_window(spec, dataset):
+def crop_window(spec: JsonObject, dataset: DatasetReader) -> Window:
     from rasterio.windows import Window
     values = spec.get("window", [0, 0, dataset.width, dataset.height])
     if (not isinstance(values, list) or len(values) != 4 or any(type(v) is not int for v in values)
@@ -140,13 +150,13 @@ def crop_window(spec, dataset):
     return Window(*values)
 
 
-def radiometry(spec, base):
+def radiometry(spec: JsonObject, base: Path) -> JsonObject:
     value = spec.get("radiometry")
     if not isinstance(value, dict) or set(value) - {"quantification_value", "offsets", "product_metadata"}:
         raise ValueError("Declare radiometry quantification_value, offsets, and optionally product_metadata")
     q, offsets = value.get("quantification_value"), value.get("offsets")
-    number = lambda x: type(x) in (int, float) and math.isfinite(x)
-    if (not number(q) or not 0 < q <= 1e9 or not isinstance(offsets, dict) or set(offsets) != set(S2_BANDS)
+    number: Callable[[object], bool] = lambda x: type(x) in (int, float) and math.isfinite(cast(float, x))
+    if (not number(q) or not 0 < cast(float, q) <= 1e9 or not isinstance(offsets, dict) or set(offsets) != set(S2_BANDS)
             or any(not number(v) or abs(v) > 1e9 for v in offsets.values())):
         raise ValueError("Positive finite quantification and twelve finite per-band offsets are required")
     result = {"quantification_value": q, "offsets": offsets, "values_match_product_xml": False,
@@ -163,16 +173,16 @@ def radiometry(spec, base):
             root = ET.fromstring(data)
         except ET.ParseError as error:
             raise ValueError("Product metadata is not valid XML") from error
-        nodes = lambda name: [n for n in root.iter() if n.tag.split("}")[-1] == name]
+        nodes: Callable[[str], list[ET.Element]] = lambda name: [n for n in root.iter() if n.tag.split("}")[-1] == name]
         quantities = nodes("BOA_QUANTIFICATION_VALUE")
         parsed = {}
         try:
-            xml_quantity = float(quantities[0].text) if len(quantities) == 1 else None
+            xml_quantity = float(cast(str, quantities[0].text)) if len(quantities) == 1 else None
             for node in nodes("BOA_ADD_OFFSET"):
                 key = int(node.attrib["band_id"])
                 if key in parsed:
                     raise ValueError("Duplicate XML band offsets")
-                parsed[key] = float(node.text)
+                parsed[key] = float(cast(str, node.text))
         except (KeyError, TypeError) as error:
             raise ValueError("Product XML requires numeric quantification and band_id/offset values") from error
         if (len(quantities) != 1 or xml_quantity != q
@@ -183,14 +193,14 @@ def radiometry(spec, base):
     return result
 
 
-def windows(height, width):
+def windows(height: int, width: int) -> Iterator[Window]:
     from rasterio.windows import Window
     for row in range(0, height, SIDE):
         for col in range(0, width, SIDE):
             yield Window(col, row, min(SIDE, width-col), min(SIDE, height-row))
 
 
-def source_window(dataset, target, shape):
+def source_window(dataset: DatasetReader, target: Affine, shape: tuple[int, int]) -> Window:
     from rasterio.windows import Window, from_bounds
     from rasterio.transform import array_bounds
     window = from_bounds(*array_bounds(*shape, target), transform=dataset.transform)
@@ -204,7 +214,7 @@ def source_window(dataset, target, shape):
     return Window(left, top, right-left, bottom-top)
 
 
-def aligned_block(datasets, window):
+def aligned_block(datasets: Mapping[str, DatasetReader], window: Window) -> tuple[FloatArray, BoolArray, None]:
     raster, mask = datasets["raster"], datasets["valid_mask"]
     data, declared = raster.read(window=window), mask.read(1, window=window)
     if not np.isin(declared, (0, 1)).all():
@@ -217,7 +227,7 @@ def aligned_block(datasets, window):
     return data, valid, None
 
 
-def l2a_block(datasets, target, shape, conversion):
+def l2a_block(datasets: Mapping[str, DatasetReader], target: Affine, shape: tuple[int, int], conversion: JsonObject) -> tuple[FloatArray, BoolArray, ClassArray]:
     from rasterio.warp import reproject, Resampling
     data = np.empty((12, *shape), np.float32)
     valid = np.ones(shape, bool)
@@ -252,13 +262,13 @@ def l2a_block(datasets, target, shape, conversion):
     return data, valid, scl
 
 
-def write_json(path, value):
+def write_json(path: Path, value: object) -> None:
     with path.open("x", encoding="utf-8") as stream:
         json.dump(value, stream, indent=2, ensure_ascii=False, allow_nan=False)
         stream.write("\n")
 
 
-def prepare_scene(value, output, *, base_dir=None):
+def prepare_scene(value: str | Path | JsonObject, output: Pathish, *, base_dir: Pathish | None=None) -> JsonObject:
     import rasterio
     from rasterio.windows import Window
     began = perf_counter()
@@ -304,7 +314,7 @@ def prepare_scene(value, output, *, base_dir=None):
                     if any(abs(v-round(v)) > 1e-6 for v in delta):
                         raise ValueError("Local L2A origins must align to the declared B02 10 m grid")
                     if key != "SCL":
-                        expected = (1/conversion["quantification_value"], conversion["offsets"][key]/conversion["quantification_value"])
+                        expected = (1/cast(JsonObject, conversion)["quantification_value"], cast(JsonObject, conversion)["offsets"][key]/cast(JsonObject, conversion)["quantification_value"])
                         declared = (ds.scales[0], ds.offsets[0])
                         if declared != (1., 0.) and not np.allclose(declared, expected, rtol=1e-12, atol=1e-12):
                             raise ValueError("TIFF radiometric scale/offset conflict with the declaration")
@@ -345,7 +355,7 @@ def prepare_scene(value, output, *, base_dir=None):
                     valid_pixels += int(valid.sum())
                     if scl_out is not None:
                         scl_out.write(scl, 1, window=window)
-                        for key, count in zip(*np.unique(scl, return_counts=True)):
+                        for key, count in zip(*np.unique(cast(ClassArray, scl), return_counts=True)):
                             histogram[str(int(key))] += int(count)
             if not valid_pixels:
                 raise ValueError("Prepared crop contains no valid pixels under the declared policy")
@@ -367,7 +377,7 @@ def prepare_scene(value, output, *, base_dir=None):
                 meta = conversion["product_metadata"]
                 if file_hash(meta["original_path"]) != meta["sha256"]:
                     raise ValueError("Product XML changed during preparation")
-            member = lambda name: {"path": name, "sha256": file_hash(output/name), "bytes": (output/name).stat().st_size}
+            member: Callable[[str], JsonObject] = lambda name: {"path": name, "sha256": file_hash(output/name), "bytes": (output/name).stat().st_size}
             source_record = {"source_product_id": spec["provenance"]["source_product_id"],
                 "caller_provenance_json": canonical(spec["provenance"]).decode(),
                 "caller_metadata_independently_verified": False, "band_mapping_independently_verified": False,
@@ -414,7 +424,7 @@ def prepare_scene(value, output, *, base_dir=None):
         raise
 
 
-def check_scene(manifest):
+def check_scene(manifest: Pathish) -> JsonObject:
     from ..scene_pipeline.stream_io import WindowSource, windows as source_windows
     from ..recipe import normalize_s2
     count = 0

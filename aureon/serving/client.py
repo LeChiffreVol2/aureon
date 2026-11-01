@@ -1,10 +1,15 @@
 """Prepared-input async client; explicit reads/uploads and verified durable downloads."""
+from __future__ import annotations
+from collections.abc import Callable, Sequence
+from ..value_types import JsonObject
+from .contracts import PathInput, UploadResult
 import argparse
 import http.client
 import json
 import os
 from pathlib import Path
 import time
+from typing import BinaryIO, cast
 from .verified_files import VerifiedFiles
 from ..cloud.client import CloudClient
 from ..cloud.control import file_hash,CONTRACT
@@ -12,8 +17,10 @@ from ..client import _require,_decode
 from .inputs import declarations,member
 
 class Client(CloudClient):
-    def upload_prepared(self,manifest,*,task,notify=None):
-        start=time.monotonic();manifest=Path(manifest).resolve(strict=True);value=json.loads(manifest.read_bytes())
+    def upload_prepared(self, manifest: PathInput, *, task: str, notify: Callable[[JsonObject], object] | None = None) -> UploadResult:
+        start=time.monotonic();manifest=Path(manifest).resolve(strict=True)
+        _require(manifest.stat().st_size<=4*1024**2,'Prepared manifest exceeds metadata byte budget')
+        value=json.loads(manifest.read_bytes())
         records=declarations(value,task);paths={'manifest.json':manifest}
         for name,record in records.items():
             p=(manifest.parent/name).resolve(strict=True)
@@ -39,25 +46,34 @@ class Client(CloudClient):
         self.json('POST','/v1/inputs/'+created['id']+'/complete',payload={})
         return {'input_id':created['id'],'manifest_sha256':file_hash(manifest),'upload_seconds':time.monotonic()-start,'files':len(paths)}
 
-    def submit_model(self,input_id,*,model,profile,task,key,seed=17):
+    def submit_model(self, input_id: str, *, model: str, profile: str, task: str, key: str, seed: int = 17) -> JsonObject:
         return self.json('POST','/v1/jobs',payload={'input_id':input_id,'model_id':model,'profile_id':profile,'task':task,
-          'parameters':{'seed':seed} if task=='generation' else {}},key=key)
+          'parameters':{'seed':seed} if task in {'generation','generation_scene','features'} else {}},key=key)
 
-    def download_result(self,identifier,output,*,expected_manifest_sha256,model,task):
+    def download_result(self, identifier: str, output: PathInput, *, expected_manifest_sha256: str, model: str, task: str) -> JsonObject:
         start=time.monotonic();output=Path(output).absolute();_require(not output.exists() and output.parent.is_dir(),'Fresh download directory required')
         listing=self.json('GET','/v1/jobs/'+identifier+'/artifacts');_require(listing['job_id']==identifier,'Job identity mismatch')
         names=set(listing['artifacts']);fake=names=={'simulation.json'}
-        expected={'job.json','native-job.json','provenance.json'}|({'class_map.tif','valid_mask.tif'} if task=='scene' else {'synthetic-s1grd.tif','raw.npy','tokens.npy'})
+        from .workflow_config import artifacts
+        expected=artifacts(task)
         _require(fake or names==expected,'Unexpected artifact contract')
-        store=VerifiedFiles(output,max_total_bytes=CONTRACT['max_artifact_bytes']*len(names),max_files=len(names))
+        streaming=task in {'generation_scene','features'}
+        budget=4*1024**3 if streaming else CONTRACT['max_artifact_bytes']*len(names)
+        _require(sum(item['bytes'] for item in listing['artifacts'].values())<=budget,'Result exceeds client byte budget')
+        store=VerifiedFiles(output,max_total_bytes=budget,max_files=len(names))
+        data: bytes | None
         saved={}
         for name,item in listing['artifacts'].items():
             member(name);_require('/' not in name and item['url'].startswith('/v1/jobs/'+identifier+'/artifacts/'+name+'?ticket='),'Invalid artifact path')
-            with self._response('GET',item['url']) as response:data=self._read(response,CONTRACT['max_artifact_bytes'])
-            try:saved[name]=store.save(name,data,expected=item)
+            try:
+                with self._response('GET',item['url']) as response:
+                    if streaming:
+                        saved[name]=store.save_stream(name,cast(BinaryIO,response),expected=item,retain_bytes=name in {'job.json','simulation.json'})
+                    else:
+                        data=self._read(response,CONTRACT['max_artifact_bytes']);saved[name]=store.save(name,data,expected=item)
             except ValueError as exc:
                 _require(False,'Artifact hash or saved-file identity mismatch: '+str(exc))
-            if name not in {'job.json','simulation.json'}:store.data.pop(name)
+            if name not in {'job.json','simulation.json'}:store.data.pop(name,None)
             data=None
         if fake:
             receipt=json.loads(store.data['simulation.json'])
@@ -72,14 +88,15 @@ class Client(CloudClient):
           'input_manifest_sha256':expected_manifest_sha256,'artifacts':saved,'download_seconds':time.monotonic()-start,
           'persisted_files_reopened':False,'persisted_bytes_read_back':True,
           'saved_byte_verification':'exclusive_unbuffered_descriptor_and_named_identity',
-          'numerical_comparison':'not_evaluated_by_transport','COG_decoding':'consumer_audit_separate',
+          'numerical_comparison':'not_evaluated_by_transport','COG_decoding':'not_applicable_features' if task=='features' else 'consumer_audit_separate',
           'original_to_download':{} if fake else {r['original_path']:saved[n]['path'] for n,r in receipt['artifacts'].items()}}
         with (output/'download.json').open('x') as f:json.dump(proof,f,indent=2)
         store.release()
         return proof
 
-def main(argv=None):
+def main(argv: Sequence[str] | None = None) -> int:
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--url',required=True);p.add_argument('--credentials',type=Path,required=True);p.add_argument('--tenant',required=True)
+    p.add_argument('--timeout',type=float,default=30,help='Socket inactivity timeout in seconds, finite 1..600; server total deadline remains bounded')
     sub=p.add_subparsers(dest='command',required=True)
     for command in ['models','health','ready','drain']:sub.add_parser(command)
     for command in ['status','cancel']:
@@ -92,18 +109,19 @@ def main(argv=None):
     args=p.parse_args(argv)
     credentials=json.loads(args.credentials.read_bytes())
     token=credentials['key'] if credentials.get('tenant')==args.tenant and 'key' in credentials else credentials[args.tenant]
-    client=Client(args.url,token=token)
+    _require(1<=args.timeout<=600,'timeout must be finite and between 1 and 600 seconds')
+    client=Client(args.url,token=token,timeout=args.timeout)
     if args.command=='run':
         before=time.monotonic();recovery=args.recovery_file.open('x') if args.recovery_file else None
         if recovery:os.chmod(args.recovery_file,0o600)
-        def progress(value):
+        def progress(value: JsonObject) -> None:
             print(json.dumps(value),flush=True)
             if recovery:recovery.write(json.dumps(value)+'\n');recovery.flush();os.fsync(recovery.fileno())
         try:
             progress({'event':'request','model':args.model,'task':args.task,'profile':args.profile,'seed':args.seed,
               'idempotency_key':args.idempotency_key,'manifest_sha256':file_hash(Path(args.manifest))})
             if args.input_id:
-                upload={'input_id':args.input_id,'manifest_sha256':file_hash(Path(args.manifest)),'reused_input':True,'upload_seconds':0.}
+                upload: UploadResult={'input_id':args.input_id,'manifest_sha256':file_hash(Path(args.manifest)),'reused_input':True,'upload_seconds':0.}
                 progress({'event':'input_reused',**upload})
             else:upload=client.upload_prepared(args.manifest,task=args.task,notify=progress)
             prepared=client.wait_input(upload['input_id']);_require(prepared['prepared_manifest_sha256']==upload['manifest_sha256'],'Prepared manifest identity changed')
