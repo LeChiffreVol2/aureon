@@ -1,4 +1,8 @@
 """CPU-only environment, bundle and prepared-scene checks; never loads a model."""
+
+from __future__ import annotations
+from collections.abc import Sequence
+from .value_types import JsonObject, Pathish
 import argparse
 from importlib import metadata
 import json
@@ -15,13 +19,14 @@ PROFILES = {
 DEFAULT_PROFILE = "torch214-cu130"
 
 
-def inspect_environment(profile=DEFAULT_PROFILE):
+def inspect_environment(profile: str=DEFAULT_PROFILE) -> JsonObject:
     if profile not in PROFILES:
         raise ValueError("Unknown environment profile: " + str(profile))
-    checks = [{"name": "platform", "passed": sys.platform == "linux", "actual": sys.platform, "required": "linux"},
+    checks: list[JsonObject] = [{"name": "platform", "passed": sys.platform == "linux", "actual": sys.platform, "required": "linux"},
               {"name": "python", "passed": sys.version_info[:2] == (3, 12),
                "actual": platform.python_version(), "required": "3.12.x"}]
     for name, version in PROFILES[profile].items():
+        actual: str | None
         try:
             actual = metadata.version(name)
         except metadata.PackageNotFoundError:
@@ -34,8 +39,8 @@ def inspect_environment(profile=DEFAULT_PROFILE):
             "model_imported_or_executed": False}
 
 
-def preflight(*, manifest=None, bundle=None, environment=True, profile=DEFAULT_PROFILE):
-    result = {"schema": "aureon.preflight.v1", "status": "passed", "model_executed": False,
+def preflight(*, manifest: Pathish | None=None, bundle: Pathish | None=None, environment: bool=True, profile: str=DEFAULT_PROFILE) -> JsonObject:
+    result: JsonObject = {"schema": "aureon.preflight.v1", "status": "passed", "model_executed": False,
               "network_access": False}
     if environment:
         result["environment"] = inspect_environment(profile)
@@ -52,7 +57,7 @@ def preflight(*, manifest=None, bundle=None, environment=True, profile=DEFAULT_P
     return result
 
 
-def main(argv=None):
+def main(argv: Sequence[str] | None=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", help="Optional prepared local manifest; checks every bounded pixel window")
     parser.add_argument("--bundle", help="Optional existing serving bundle; verifies file hashes on CPU")

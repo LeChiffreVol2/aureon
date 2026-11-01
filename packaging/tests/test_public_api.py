@@ -131,5 +131,28 @@ assert not any(n in sys.modules for n in ('torch','numpy','rasterio'))
             self.assertFalse((root/"output").exists())
 
 
+class SourceCleanup(unittest.TestCase):
+    def test_public_profiles_exclude_comparison_runtime(self):
+        self.assertEqual(set(profiles.PROFILES), {"scene", "scene-legacy", "generation"})
+
+    def test_preparation_alias_and_retired_commands_are_lazy(self):
+        code = '''import importlib.abc,sys,contextlib,io
+class Block(importlib.abc.MetaPathFinder):
+ def find_spec(self, fullname, path=None, target=None):
+  if fullname.split('.')[0] in {'torch','numpy','terratorch','rasterio','vllm'}:
+   raise AssertionError(fullname)
+sys.meta_path.insert(0, Block())
+from aureon.__main__ import main
+for command, expected in [('prepare-bundle',0),('prepare-vllm',2),('infer',2),('verify-bundle',0),('benchmark',2),('serve-model',2)]:
+ with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+  try: main([command,'--help'])
+  except SystemExit as error: assert error.code == expected, (command,error.code)
+  else: raise AssertionError(command)
+'''
+        child = subprocess.run([sys.executable, "-B", "-c", code], capture_output=True, text=True,
+                               cwd=Path(__file__).resolve().parents[2], timeout=30)
+        self.assertEqual(child.returncode, 0, child.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()

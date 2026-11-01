@@ -1,4 +1,10 @@
 """Explicit bounded streaming execution with sequential on-disk FP32 reference."""
+
+from __future__ import annotations
+from collections.abc import Callable, Iterable, Sequence
+from typing import Self, TextIO, cast
+from ..value_types import Pathish, FloatArray, ArrayPredictor, JsonObject, WindowCoordinates, StreamingBudget
+
 from contextlib import ExitStack
 import hashlib
 import json
@@ -18,7 +24,7 @@ SCRATCH_BUDGET=8*1024**3
 APPLICATION_BUDGET=384*1024**2
 
 
-def budget(source,destination):
+def budget(source: WindowSource,destination: Pathish) -> StreamingBudget:
     # Includes separate reference, disk accumulator, representative candidate,
     # categorical staging/COGs and conservative TIFF/overview overhead.
     disk=source.total*10*224*224*4*2 + source.width*source.height*64 + 64*1024**2
@@ -36,18 +42,18 @@ def budget(source,destination):
             'scope':'Application buffer plan; sampled RSS also includes interpreter/runtime/allocator retention'}
 
 
-def _output(values,count):
+def _output(values: object,count: int) -> FloatArray:
     if (not isinstance(values,np.ndarray) or values.dtype!=np.float32
             or values.shape!=(count,*LOGIT_SHAPE) or not np.isfinite(values).all()):
         raise ValueError('Expected finite FP32 outputs for the real group')
-    return values
+    return cast(FloatArray, values)
 
 
-def _line(stream,record):
+def _line(stream: TextIO,record: object) -> None:
     stream.write(json.dumps(record,sort_keys=True,separators=(',',':'))+'\n')
 
 
-def _cleanup_owned(folder,names):
+def _cleanup_owned(folder: Pathish,names: Iterable[str]) -> None:
     # Only exact temporary files in this new attempt, never arbitrary folders.
     folder=Path(folder).resolve(strict=True)
     for name in names:
@@ -56,13 +62,13 @@ def _cleanup_owned(folder,names):
         if path.exists(): path.unlink()
 
 
-def _precision_contract(value):
+def _precision_contract(value: JsonObject | None) -> str | JsonObject:
     if value is None: return 'highest FP32; TF32 off'
     from ..experimental_precision import validate_contract
     return validate_contract(value)
 
 
-def build_reference(manifest,eager,destination,*,model_identity,cancelled=None,precision_contract=None):
+def build_reference(manifest: Pathish,eager: ArrayPredictor,destination: Pathish,*,model_identity: JsonObject,cancelled: Callable[[], bool] | None=None,precision_contract: JsonObject | None=None) -> JsonObject:
     """Separate eager calls plus independent disk accumulation; outside warm cache timing."""
     precision=_precision_contract(precision_contract)
     destination=Path(destination).absolute()
@@ -113,7 +119,7 @@ def build_reference(manifest,eager,destination,*,model_identity,cancelled=None,p
 
 
 class ReferenceCursor:
-    def __init__(self,folder,source,model_identity,*,precision_contract=None):
+    def __init__(self,folder: Pathish,source: WindowSource,model_identity: JsonObject,*,precision_contract: JsonObject | None=None) -> None:
         self.folder=Path(folder); self.meta=json.loads((self.folder/'reference.json').read_text())
         m=self.meta
         if (m['status']!='completed' or m['source_manifest_sha256']!=source.manifest_hash
@@ -131,10 +137,10 @@ class ReferenceCursor:
             self.stack.close(); raise
         self.digest=hashlib.sha256(); self.tiles=0
 
-    def next(self,inputs,selected):
+    def next(self,inputs: FloatArray,selected: Sequence[WindowCoordinates]) -> tuple[FloatArray, JsonObject]:
         return self.next_hashed(array_hash(inputs),selected)
 
-    def next_hashed(self,input_sha256,selected):
+    def next_hashed(self,input_sha256: str,selected: Sequence[WindowCoordinates]) -> tuple[FloatArray, JsonObject]:
         """Consume a prepared group's sealed hash after its input lease is free."""
         if (not isinstance(input_sha256,str) or len(input_sha256)!=64
                 or any(c not in '0123456789abcdef' for c in input_sha256)):
@@ -153,19 +159,19 @@ class ReferenceCursor:
         self.digest.update(memoryview(outputs).cast('B')); self.tiles+=count
         return outputs,record
 
-    def finish(self):
+    def finish(self) -> None:
         if (self.logits.read(1) or self.ledger.read(1) or self.tiles!=self.meta['tile_count']
                 or self.digest.hexdigest()!=self.meta['logits_sha256']):
             raise ValueError('Reference coverage or whole-logit identity changed')
 
-    def close(self): self.stack.close()
-    def __enter__(self): return self
-    def __exit__(self,*args): self.close()
+    def close(self) -> None: self.stack.close()
+    def __enter__(self) -> Self: return self
+    def __exit__(self,*args: object) -> None: self.close()
 
 
-def run_streaming(manifest,candidate,reference,destination,*,model_identity,provenance,
-                  cancelled=None,save_logits=False,precision_contract=None,
-                  execution_route='graph_eight_eager_tail'):
+def run_streaming(manifest: Pathish,candidate: ArrayPredictor,reference: Pathish,destination: Pathish,*,model_identity: JsonObject,provenance: JsonObject,
+                  cancelled: Callable[[], bool] | None=None,save_logits: bool=False,precision_contract: JsonObject | None=None,
+                  execution_route: str='graph_eight_eager_tail') -> JsonObject:
     """Warm delivery with a verified disk reference; API builds one per job."""
     precision=_precision_contract(precision_contract)
     if execution_route not in ('graph_eight_eager_tail','direct_eager'):

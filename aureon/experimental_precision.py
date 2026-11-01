@@ -3,6 +3,18 @@
 Import is runtime-free. Every worker owns one immutable policy and one GPU thread.
 Stored weights, normalized inputs, CPU outputs and blending remain FP32.
 """
+
+from __future__ import annotations
+from typing import TYPE_CHECKING, cast
+from .value_types import FloatArray
+
+if TYPE_CHECKING:
+    from torch import Tensor
+    from torch.cuda import Stream, Event, CUDAGraph
+    from .reference import PyTorchPredictor
+from collections.abc import Iterator
+from types import ModuleType
+from .value_types import JsonObject
 from contextlib import contextmanager
 from dataclasses import dataclass
 import hashlib
@@ -17,7 +29,7 @@ PROFILES = ('fp32_reference', 'tf32', 'amp_fp16', 'amp_bf16')
 ROUTES = ('direct_eager', 'aureon_optimized')
 
 
-def precision_contract(profile):
+def precision_contract(profile: str) -> JsonObject:
     if profile not in PROFILES:
         raise ValueError('Unknown explicit experimental precision profile')
     return {'schema': 'aureon.experimental_precision.v1', 'profile': profile,
@@ -28,8 +40,8 @@ def precision_contract(profile):
             'neural_batch': 1, 'padding': False, 'experimental': True}
 
 
-def validate_contract(value):
-    if not isinstance(value, dict) or value != precision_contract(value.get('profile')):
+def validate_contract(value: object) -> JsonObject:
+    if not isinstance(value, dict) or value != precision_contract(cast(str, value.get('profile'))):
         raise ValueError('Precision contract must match the complete versioned profile')
     return dict(value)
 
@@ -38,10 +50,10 @@ def validate_contract(value):
 class PrecisionPolicy:
     profile: str
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         precision_contract(self.profile)
 
-    def apply(self, torch):
+    def apply(self, torch: ModuleType) -> JsonObject:
         if self.profile == 'tf32' and os.environ.get('NVIDIA_TF32_OVERRIDE') == '0':
             raise ValueError('TF32 profile is disabled by NVIDIA_TF32_OVERRIDE=0')
         if self.profile == 'amp_bf16' and not torch.cuda.is_bf16_supported(including_emulation=False):
@@ -62,7 +74,7 @@ class PrecisionPolicy:
             torch.backends.cuda.allow_fp16_bf16_reduction_math_sdp(False)
         return self.readback(torch)
 
-    def readback(self, torch):
+    def readback(self, torch: ModuleType) -> JsonObject:
         from .cuda_graph import _precision
         return {**_precision(torch),
             'fp16_reduced_precision_reduction': bool(torch.backends.cuda.matmul.allow_fp16_reduced_precision_reduction),
@@ -73,7 +85,7 @@ class PrecisionPolicy:
             'default_dtype': str(torch.get_default_dtype())}
 
     @contextmanager
-    def scope(self, torch):
+    def scope(self, torch: ModuleType) -> Iterator[None]:
         dtype = {'amp_fp16': torch.float16, 'amp_bf16': torch.bfloat16}.get(self.profile)
         with torch.autocast('cuda', enabled=dtype is not None, dtype=dtype, cache_enabled=True):
             yield
@@ -85,10 +97,20 @@ class PrecisionExecutor:
     Construction attests actual resident tensor bytes. Every call returns owned
     FP32 output after completion. Capture/parity failures never fall back.
     """
-    def __init__(self, reference, profile, route):
+    stream: Stream | None
+    done: Event | None
+    graph: CUDAGraph | None
+    host_input: Tensor | None
+    host_output: Tensor | None
+    device_input: Tensor | None
+    device_output: Tensor | None
+    input_array: FloatArray | None
+    output_array: FloatArray | None
+
+    def __init__(self, reference: PyTorchPredictor, profile: str, route: str) -> None:
         from .reference import PyTorchPredictor
         from .scene_api.identity import TensorSeal
-        from .vllm_bundle import _tensor_record
+        from .checkpoint_bundle import _tensor_record
         if not isinstance(reference, PyTorchPredictor) or reference.dtype != 'float32':
             raise ValueError('Supply the strict FP32-loaded reference')
         if route not in ROUTES or reference._device.type != 'cuda' or not reference._as_dict:
@@ -101,7 +123,7 @@ class PrecisionExecutor:
         self.contract = precision_contract(profile)
         self.route = route
         self.state = 'ready'
-        self.raw_output_dtypes = set()
+        self.raw_output_dtypes: set[str] = set()
         self.calls = self.forwards = self.graph_groups = self.eager_groups = self.captures = 0
         self.stream = self.graph = self.done = None
         self.host_input = self.host_output = self.device_input = self.device_output = None
@@ -114,7 +136,7 @@ class PrecisionExecutor:
         self.seal = TensorSeal(self.model)
         self.guard()
 
-    def guard(self):
+    def guard(self) -> None:
         if threading.get_ident() != self.owner or self.state != 'ready':
             raise RuntimeError('Wrong GPU owner or unavailable precision executor')
         if self.policy.readback(self.torch) != self.actual:
@@ -123,16 +145,16 @@ class PrecisionExecutor:
             raise RuntimeError('Caller autocast scope is unsupported')
         self.seal.verify()
 
-    def _logits(self, output):
+    def _logits(self, output: object) -> Tensor:
         torch = self.torch
         value = output if isinstance(output, torch.Tensor) else getattr(output, 'output', None)
         if (not isinstance(value, torch.Tensor) or tuple(value.shape) != (1,10,224,224)
                 or value.device != self.device or not value.is_floating_point()):
             raise ValueError('Model must return one CUDA [1,10,224,224] floating output')
         self.raw_output_dtypes.add(str(value.dtype))
-        return value.float()
+        return cast("Tensor", value.float())
 
-    def _eager(self, values):
+    def _eager(self, values: FloatArray) -> FloatArray:
         torch = self.torch
         result = np.empty((len(values),10,224,224), dtype=np.float32)
         with self.policy.scope(torch):
@@ -142,15 +164,15 @@ class PrecisionExecutor:
                 result[index:index+1] = logits.to('cpu').contiguous().numpy()
         return result
 
-    def _body(self):
-        self.device_input.copy_(self.host_input, non_blocking=True)
+    def _body(self) -> None:
+        cast("Tensor", self.device_input).copy_(cast("Tensor", self.host_input), non_blocking=True)
         with self.policy.scope(self.torch):
             for index in range(8):
-                logits = self._logits(self.model({'S2L2A': self.device_input[index:index+1]}))
-                self.device_output[index:index+1].copy_(logits, non_blocking=True)
-        self.host_output.copy_(self.device_output, non_blocking=True)
+                logits = self._logits(self.model({'S2L2A': cast("Tensor", self.device_input)[index:index+1]}))
+                cast("Tensor", self.device_output)[index:index+1].copy_(logits, non_blocking=True)
+        cast("Tensor", self.host_output).copy_(cast("Tensor", self.device_output), non_blocking=True)
 
-    def _graph_call(self, values):
+    def _graph_call(self, values: FloatArray) -> FloatArray:
         torch = self.torch
         if self.stream is None:
             self.stream = torch.cuda.Stream(device=self.device)
@@ -158,11 +180,11 @@ class PrecisionExecutor:
             self.host_input = torch.empty((8,12,224,224),dtype=torch.float32,pin_memory=True)
             self.host_output = torch.empty((8,10,224,224),dtype=torch.float32,pin_memory=True)
             with torch.cuda.stream(self.stream):
-                self.device_input = torch.empty_like(self.host_input,device=self.device)
-                self.device_output = torch.empty_like(self.host_output,device=self.device)
-            self.input_array = self.host_input.numpy()
-            self.output_array = self.host_output.numpy()
-        np.copyto(self.input_array, values, casting='no')
+                self.device_input = torch.empty_like(cast("Tensor", self.host_input),device=self.device)
+                self.device_output = torch.empty_like(cast("Tensor", self.host_output),device=self.device)
+            self.input_array = cast("Tensor", self.host_input).numpy()
+            self.output_array = cast("Tensor", self.host_output).numpy()
+        np.copyto(cast("FloatArray", self.input_array), values, casting='no')
         self.stream.wait_stream(torch.cuda.current_stream(self.device))
         if self.graph is None:
             with torch.cuda.stream(self.stream):
@@ -174,11 +196,11 @@ class PrecisionExecutor:
             self.captures += 1
         with torch.cuda.stream(self.stream):
             self.graph.replay()
-            self.done.record(self.stream)
-        self.done.synchronize()
-        return self.output_array.copy()
+            cast("Event", self.done).record(self.stream)
+        cast("Event", self.done).synchronize()
+        return cast("FloatArray", self.output_array).copy()
 
-    def __call__(self, values):
+    def __call__(self, values: FloatArray) -> FloatArray:
         self.guard()
         if (not isinstance(values,np.ndarray) or values.dtype != np.float32
                 or values.ndim != 4 or values.shape[1:] != (12,224,224)
@@ -200,7 +222,7 @@ class PrecisionExecutor:
         self.eager_groups += int(not graph_call)
         return result
 
-    def metadata(self):
+    def metadata(self) -> JsonObject:
         return {'schema':'aureon.precision_executor.v1','route':self.route,
             'contract':dict(self.contract),'effective_policy':self.policy.readback(self.torch),
             'state':self.state,'pid':os.getpid(),'owner_thread':self.owner,
@@ -220,10 +242,10 @@ class PrecisionExecutor:
             'pinned_staging_bytes':sum(t.numel()*t.element_size() for t in
                 (self.host_input,self.host_output) if t is not None)}
 
-    def synchronize(self):
+    def synchronize(self) -> None:
         self.torch.cuda.synchronize(self.device)
 
-    def close(self):
+    def close(self) -> None:
         if threading.get_ident() != self.owner: raise RuntimeError('Wrong owner for cleanup')
         if self.state == 'closed': return
         self.synchronize()

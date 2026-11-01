@@ -37,7 +37,7 @@ def write(path, data):
 
 class ReviewFixture(unittest.TestCase):
     def setUp(self):
-        scratch_parent = Path(__file__).resolve().parent
+        scratch_parent = Path(tempfile.gettempdir()).resolve()
         self.temporary = tempfile.TemporaryDirectory(prefix="aureon-packaging-test-", dir=scratch_parent)
         self.base = Path(self.temporary.name)
         if not self.base.resolve().is_relative_to(scratch_parent):
@@ -79,6 +79,14 @@ class ReviewFixture(unittest.TestCase):
 
 
 class StagingTests(ReviewFixture):
+    def test_missing_source_documentation_is_rejected_before_staging(self):
+        write(self.root / 'packaging/README.md', '[Missing guide](missing-guide.md)\n')
+        self.assert_preflight_rejects()
+
+    def test_source_links_may_target_staged_files_and_external_docs(self):
+        write(self.root / 'packaging/README.md', '[Inputs](INPUTS.md) [Upstream](https://example.org/docs)\n')
+        self.stage()
+
     def test_path_admission_rejects_escape_absolute_windows_and_forbidden_members(self):
         for name in ("../outside.txt", "/absolute.txt", "aureon/../../outside.txt",
                      "aureon\\example.py", "X:/absolute.txt", ".env", "aureon/.env.local",
@@ -339,6 +347,13 @@ class ArchiveTests(ReviewFixture):
                 self.archives()
                 with self.assertRaises(ValueError):
                     self.audit()
+
+    def test_wheel_cannot_change_distribution_dependency_profile(self):
+        self.wheel[self.info + '/METADATA']=self.metadata.replace(b'Metadata-Version: 2.4\n',
+            b'Metadata-Version: 2.4\nRequires-Dist: unexpected-package==1.0.0\n')
+        self.archives()
+        with self.assertRaisesRegex(ValueError,'dependency metadata'):
+            self.audit()
 
 
 if __name__ == "__main__":

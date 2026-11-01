@@ -17,3 +17,8 @@ norviccompanylimited@gmail.com for contributions/support; report security issues
 privately through [SECURITY.md](SECURITY.md). Proposed contributions are reviewed
 under the accompanying Apache-2.0 terms; do not claim ownership of third-party
 code. This public alpha does not imply a hosted SLA. See the [repository contribution guide](../CONTRIBUTING.md).
+
+## Types and additional CPU contracts
+
+See [Python contracts and CPU validation](TYPING.md) for type checking, NumPy
+queue contracts, Linux process tests and installed-wheel validation.

@@ -1,0 +1,1595 @@
+{
+  "schema": "aureon.selected_engine_source.v1",
+  "version": "0.1.0",
+  "wheel_sha256": "e09e710c9e9ace17b7bf2214d8c9eff2c4ed605a7d45e8c4e649b672f6f88a64",
+  "performance_origin_wheel_sha256": "0fa5ef2b9440fcc310a17c76f78df52278cbe2d354015be2046a8e4196715c97",
+  "runtime": [
+    {
+      "path": "aureon/__init__.py",
+      "source_bytes": 84,
+      "source_sha256": "870e2cba474e6bc40c83fee61c25435ac0b93bdc1aeb98a67af8c03bc84710b3",
+      "wheel_bytes": 84,
+      "wheel_sha256": "870e2cba474e6bc40c83fee61c25435ac0b93bdc1aeb98a67af8c03bc84710b3"
+    },
+    {
+      "path": "aureon/__main__.py",
+      "source_bytes": 2342,
+      "source_sha256": "25d02cebe82ce8e1b39cd48b34cbc51a72b93f73a90255257a22ebf7c2192a5c",
+      "wheel_bytes": 2342,
+      "wheel_sha256": "25d02cebe82ce8e1b39cd48b34cbc51a72b93f73a90255257a22ebf7c2192a5c"
+    },
+    {
+      "path": "aureon/_reference/__init__.py",
+      "source_bytes": 152,
+      "source_sha256": "3e4595ab038cbfefcee747ee474731024f8576cbe8b8bd0930899e7bbbbcb37d",
+      "wheel_bytes": 152,
+      "wheel_sha256": "3e4595ab038cbfefcee747ee474731024f8576cbe8b8bd0930899e7bbbbcb37d"
+    },
+    {
+      "path": "aureon/_reference/integrity.py",
+      "source_bytes": 3558,
+      "source_sha256": "b3da0e24d143db9e1b6b9c1d9de302341dc9ee5a107c6984eead63d00c36c57a",
+      "wheel_bytes": 3558,
+      "wheel_sha256": "b3da0e24d143db9e1b6b9c1d9de302341dc9ee5a107c6984eead63d00c36c57a"
+    },
+    {
+      "path": "aureon/_reference/terramind/NOTICE.md",
+      "source_bytes": 1425,
+      "source_sha256": "8fe23a9be6b95473dfbd4e96a569fba4dcda951bb1257cb783b58b760a5e69f0",
+      "wheel_bytes": 1425,
+      "wheel_sha256": "8fe23a9be6b95473dfbd4e96a569fba4dcda951bb1257cb783b58b760a5e69f0"
+    },
+    {
+      "path": "aureon/_reference/terramind/SOURCE.json",
+      "source_bytes": 6196,
+      "source_sha256": "42f56ee519e8f7ba6343d4339a9adb2b6dd9486fd6e8a42444f17d4a2b5530cf",
+      "wheel_bytes": 6196,
+      "wheel_sha256": "42f56ee519e8f7ba6343d4339a9adb2b6dd9486fd6e8a42444f17d4a2b5530cf"
+    },
+    {
+      "path": "aureon/_reference/terramind/__init__.py",
+      "source_bytes": 377,
+      "source_sha256": "3f4a34cd60cd37d7abddd1966ca0550ce3980e747e08868fa7eaa2efb4f03ffb",
+      "wheel_bytes": 377,
+      "wheel_sha256": "3f4a34cd60cd37d7abddd1966ca0550ce3980e747e08868fa7eaa2efb4f03ffb"
+    },
+    {
+      "path": "aureon/_reference/terramind/common.py",
+      "source_bytes": 3263,
+      "source_sha256": "1f1f796f8fcbebf4bbb50d6831e6dde8eed9563e042f8ee2d8a601e28a5bebf3",
+      "wheel_bytes": 3263,
+      "wheel_sha256": "1f1f796f8fcbebf4bbb50d6831e6dde8eed9563e042f8ee2d8a601e28a5bebf3"
+    },
+    {
+      "path": "aureon/_reference/terramind/compat.py",
+      "source_bytes": 3142,
+      "source_sha256": "989194b973edca512550f60a5fcc1d1d56703fd5b3432d4eaf1902479267c258",
+      "wheel_bytes": 3142,
+      "wheel_sha256": "989194b973edca512550f60a5fcc1d1d56703fd5b3432d4eaf1902479267c258"
+    },
+    {
+      "path": "aureon/_reference/terramind/denoiser_binding.py",
+      "source_bytes": 6137,
+      "source_sha256": "368d87a254de6f0fa5a78c1974256fcfdbfb0ac8fc21e4547b25c81554f2026a",
+      "wheel_bytes": 6137,
+      "wheel_sha256": "368d87a254de6f0fa5a78c1974256fcfdbfb0ac8fc21e4547b25c81554f2026a"
+    },
+    {
+      "path": "aureon/_reference/terramind/denoiser_graph.py",
+      "source_bytes": 4729,
+      "source_sha256": "bc886eb9fc3d726f3466bbeb11bd8d22df5745fb64e7b50a575b1f551691b1fe",
+      "wheel_bytes": 4729,
+      "wheel_sha256": "bc886eb9fc3d726f3466bbeb11bd8d22df5745fb64e7b50a575b1f551691b1fe"
+    },
+    {
+      "path": "aureon/_reference/terramind/geo.py",
+      "source_bytes": 6986,
+      "source_sha256": "aa751907569ebfcc1f29ffe317d93189c983c96ab80fadd2b9ce9cd9c27bbaec",
+      "wheel_bytes": 6986,
+      "wheel_sha256": "aa751907569ebfcc1f29ffe317d93189c983c96ab80fadd2b9ce9cd9c27bbaec"
+    },
+    {
+      "path": "aureon/_reference/terramind/graph_runtime.py",
+      "source_bytes": 6193,
+      "source_sha256": "35aab933e6779989a011c4d172b12ae513bc5c54c17f1e00c4021e33690b3d1a",
+      "wheel_bytes": 6193,
+      "wheel_sha256": "35aab933e6779989a011c4d172b12ae513bc5c54c17f1e00c4021e33690b3d1a"
+    },
+    {
+      "path": "aureon/_reference/terramind/harness.py",
+      "source_bytes": 3611,
+      "source_sha256": "a79357a11ce5e04b1a18c46dd913b6d557fac9b44b8e34472d79f54d5c7458a4",
+      "wheel_bytes": 3611,
+      "wheel_sha256": "a79357a11ce5e04b1a18c46dd913b6d557fac9b44b8e34472d79f54d5c7458a4"
+    },
+    {
+      "path": "aureon/_reference/terramind/loader.py",
+      "source_bytes": 7932,
+      "source_sha256": "f52d492c1e41cc367b9221205eda9d34d22ae3403e50aa8394479bfe73addda8",
+      "wheel_bytes": 7932,
+      "wheel_sha256": "f52d492c1e41cc367b9221205eda9d34d22ae3403e50aa8394479bfe73addda8"
+    },
+    {
+      "path": "aureon/_reference/terramind/reuse.py",
+      "source_bytes": 2338,
+      "source_sha256": "597947b10342bf4133b5a451a25da8e795f0d08b14a2de82dcc0e4d0787d0d97",
+      "wheel_bytes": 2338,
+      "wheel_sha256": "597947b10342bf4133b5a451a25da8e795f0d08b14a2de82dcc0e4d0787d0d97"
+    },
+    {
+      "path": "aureon/_reference/terramind/rng.py",
+      "source_bytes": 2068,
+      "source_sha256": "bab99e6a5c095d08937bb2c10bd48c01550f04bc4ddba8365dcffb0706e257cc",
+      "wheel_bytes": 2068,
+      "wheel_sha256": "bab99e6a5c095d08937bb2c10bd48c01550f04bc4ddba8365dcffb0706e257cc"
+    },
+    {
+      "path": "aureon/_reference/terramind/session.py",
+      "source_bytes": 25538,
+      "source_sha256": "e6b73d1682060b506ea98cd344afb82456a332190ce67542f4eb8cba655e5d15",
+      "wheel_bytes": 25538,
+      "wheel_sha256": "e6b73d1682060b506ea98cd344afb82456a332190ce67542f4eb8cba655e5d15"
+    },
+    {
+      "path": "aureon/_reference/terramind/upstream-source.json",
+      "source_bytes": 7864,
+      "source_sha256": "9c216d235b1f36eff56946d7f52b88bee5db1f69c60d6c0504fdb42d78c7d9cc",
+      "wheel_bytes": 7864,
+      "wheel_sha256": "9c216d235b1f36eff56946d7f52b88bee5db1f69c60d6c0504fdb42d78c7d9cc"
+    },
+    {
+      "path": "aureon/api/__init__.py",
+      "source_bytes": 9796,
+      "source_sha256": "5ffd48242fc7bca77995703e21e7ef3a5cdc3119db4ca970edbe72e71e7a21d0",
+      "wheel_bytes": 9796,
+      "wheel_sha256": "5ffd48242fc7bca77995703e21e7ef3a5cdc3119db4ca970edbe72e71e7a21d0"
+    },
+    {
+      "path": "aureon/api/__init__.pyi",
+      "source_bytes": 7231,
+      "source_sha256": "556522cb7e8d15a41f20171f60cc4c1425dd28717f2f8720631795419630eaea",
+      "wheel_bytes": 7231,
+      "wheel_sha256": "556522cb7e8d15a41f20171f60cc4c1425dd28717f2f8720631795419630eaea"
+    },
+    {
+      "path": "aureon/api/__main__.py",
+      "source_bytes": 83,
+      "source_sha256": "d220d88dd9a25cd0629c5176dd6532a2db1da40eb014a8e80796b0ddeb134918",
+      "wheel_bytes": 83,
+      "wheel_sha256": "d220d88dd9a25cd0629c5176dd6532a2db1da40eb014a8e80796b0ddeb134918"
+    },
+    {
+      "path": "aureon/api/_raster_types.py",
+      "source_bytes": 1038,
+      "source_sha256": "db9a28f6c7f6199ffeb885cfc736265c4b906a199ba89a8750d8a3ab6bddf058",
+      "wheel_bytes": 1038,
+      "wheel_sha256": "db9a28f6c7f6199ffeb885cfc736265c4b906a199ba89a8750d8a3ab6bddf058"
+    },
+    {
+      "path": "aureon/api/adapter_conformance.py",
+      "source_bytes": 3461,
+      "source_sha256": "23a8b6312ca3a0bc2a6eb3101b55f8b709fba1da4f6055b029f72a08051fbbaf",
+      "wheel_bytes": 3461,
+      "wheel_sha256": "23a8b6312ca3a0bc2a6eb3101b55f8b709fba1da4f6055b029f72a08051fbbaf"
+    },
+    {
+      "path": "aureon/api/adapter_registry.py",
+      "source_bytes": 8497,
+      "source_sha256": "397bb5aec3d804d2285ddd0faf1e28efb146678e4728de0d0dc895a72aa6d93c",
+      "wheel_bytes": 8497,
+      "wheel_sha256": "397bb5aec3d804d2285ddd0faf1e28efb146678e4728de0d0dc895a72aa6d93c"
+    },
+    {
+      "path": "aureon/api/assets.py",
+      "source_bytes": 2022,
+      "source_sha256": "41e221371e3b3fc4f9eeec503bffc3fca74af45690202b0b37db1851e7c5e615",
+      "wheel_bytes": 2022,
+      "wheel_sha256": "41e221371e3b3fc4f9eeec503bffc3fca74af45690202b0b37db1851e7c5e615"
+    },
+    {
+      "path": "aureon/api/batch_generation.py",
+      "source_bytes": 10607,
+      "source_sha256": "5c7a3c651f4adb015e447f0cbc21a43d98dfa87095cd0ab55e153727c86bbecb",
+      "wheel_bytes": 10607,
+      "wheel_sha256": "5c7a3c651f4adb015e447f0cbc21a43d98dfa87095cd0ab55e153727c86bbecb"
+    },
+    {
+      "path": "aureon/api/best.py",
+      "source_bytes": 3048,
+      "source_sha256": "b48a72d04dc0a6015f0c186355010c0cf0b67f68c82e196c44cf59d40c484920",
+      "wheel_bytes": 3048,
+      "wheel_sha256": "b48a72d04dc0a6015f0c186355010c0cf0b67f68c82e196c44cf59d40c484920"
+    },
+    {
+      "path": "aureon/api/best.pyi",
+      "source_bytes": 1041,
+      "source_sha256": "5ce3f72877e5efa5d5ad2574ca758d4e314d1116ef3173765f2da7cc95f7b330",
+      "wheel_bytes": 1041,
+      "wheel_sha256": "5ce3f72877e5efa5d5ad2574ca758d4e314d1116ef3173765f2da7cc95f7b330"
+    },
+    {
+      "path": "aureon/api/best_cli.py",
+      "source_bytes": 8421,
+      "source_sha256": "c23c27ad84c7bfe3ff2bcf8dd4ec2f47249722f269e8ef24a7e86187b9fe5f7e",
+      "wheel_bytes": 8421,
+      "wheel_sha256": "c23c27ad84c7bfe3ff2bcf8dd4ec2f47249722f269e8ef24a7e86187b9fe5f7e"
+    },
+    {
+      "path": "aureon/api/best_workflows.py",
+      "source_bytes": 32692,
+      "source_sha256": "b062f5a4159675c18af8ff89f55bc0c8c6c054023247999dfb1609a5f9690cd4",
+      "wheel_bytes": 32692,
+      "wheel_sha256": "b062f5a4159675c18af8ff89f55bc0c8c6c054023247999dfb1609a5f9690cd4"
+    },
+    {
+      "path": "aureon/api/borrowed_model.py",
+      "source_bytes": 584,
+      "source_sha256": "2d0f3742e07395cb07f889ac58ef5801733186fb99354ed83f2305ce5d4d4320",
+      "wheel_bytes": 584,
+      "wheel_sha256": "2d0f3742e07395cb07f889ac58ef5801733186fb99354ed83f2305ce5d4d4320"
+    },
+    {
+      "path": "aureon/api/cli.py",
+      "source_bytes": 18769,
+      "source_sha256": "4fdc2edbbd7ac5199082086474228753a93727fbb171b3c5b6337f8cfbbee047",
+      "wheel_bytes": 18769,
+      "wheel_sha256": "4fdc2edbbd7ac5199082086474228753a93727fbb171b3c5b6337f8cfbbee047"
+    },
+    {
+      "path": "aureon/api/compatibility.py",
+      "source_bytes": 2646,
+      "source_sha256": "11fe7267264151c7f955053e4b97b0fc141a52d222bd20eb9a13a7a93a21e395",
+      "wheel_bytes": 2646,
+      "wheel_sha256": "11fe7267264151c7f955053e4b97b0fc141a52d222bd20eb9a13a7a93a21e395"
+    },
+    {
+      "path": "aureon/api/contracts.py",
+      "source_bytes": 5047,
+      "source_sha256": "510d883d25e9111830bdbf19bcfea221a7618da26c3d8a37c1dd13ff21a7f02b",
+      "wheel_bytes": 5047,
+      "wheel_sha256": "510d883d25e9111830bdbf19bcfea221a7618da26c3d8a37c1dd13ff21a7f02b"
+    },
+    {
+      "path": "aureon/api/diagnostics.py",
+      "source_bytes": 8666,
+      "source_sha256": "4b5f323e568759dd5db8c12102e56555d623a912d818ad4caeb251e370a17872",
+      "wheel_bytes": 8666,
+      "wheel_sha256": "4b5f323e568759dd5db8c12102e56555d623a912d818ad4caeb251e370a17872"
+    },
+    {
+      "path": "aureon/api/encoder_io.py",
+      "source_bytes": 20882,
+      "source_sha256": "3dd060372d59d60812bc935dd66e97d53c7dda0b27dcca5a0fce9854b30eb66b",
+      "wheel_bytes": 20882,
+      "wheel_sha256": "3dd060372d59d60812bc935dd66e97d53c7dda0b27dcca5a0fce9854b30eb66b"
+    },
+    {
+      "path": "aureon/api/eo.py",
+      "source_bytes": 12024,
+      "source_sha256": "58bf2155fac8a179be8ccef8c856cd1f11145410570318db9fe2ec225c433f3b",
+      "wheel_bytes": 12024,
+      "wheel_sha256": "58bf2155fac8a179be8ccef8c856cd1f11145410570318db9fe2ec225c433f3b"
+    },
+    {
+      "path": "aureon/api/examples/README.md",
+      "source_bytes": 5248,
+      "source_sha256": "a85c7645e95b841e5b9892757f266ac369a63900659e01d08e31ec4932c10860",
+      "wheel_bytes": 5248,
+      "wheel_sha256": "a85c7645e95b841e5b9892757f266ac369a63900659e01d08e31ec4932c10860"
+    },
+    {
+      "path": "aureon/api/examples/__init__.py",
+      "source_bytes": 78,
+      "source_sha256": "9ba2695ed26846a462348b1dea4499eea8093b0a81eb98acecbc0220f53d5991",
+      "wheel_bytes": 78,
+      "wheel_sha256": "9ba2695ed26846a462348b1dea4499eea8093b0a81eb98acecbc0220f53d5991"
+    },
+    {
+      "path": "aureon/api/examples/model_support.py",
+      "source_bytes": 1669,
+      "source_sha256": "c6a6eb390a9cb881d5638b1087ca15fc1b9db25ce24bed25c3e2d957597b24cb",
+      "wheel_bytes": 1669,
+      "wheel_sha256": "c6a6eb390a9cb881d5638b1087ca15fc1b9db25ce24bed25c3e2d957597b24cb"
+    },
+    {
+      "path": "aureon/api/examples/resident_session.py",
+      "source_bytes": 1367,
+      "source_sha256": "fa29914e3715e1f41cc58091bfcddd9ce9bf19a895e78785c5dbfd3bdc4a3d13",
+      "wheel_bytes": 1367,
+      "wheel_sha256": "fa29914e3715e1f41cc58091bfcddd9ce9bf19a895e78785c5dbfd3bdc4a3d13"
+    },
+    {
+      "path": "aureon/api/examples/sdk_job.py",
+      "source_bytes": 968,
+      "source_sha256": "a6d47963a7f9ef1a644c29e77e85a3a772fdc7a040653644a808516ae75b98ff",
+      "wheel_bytes": 968,
+      "wheel_sha256": "a6d47963a7f9ef1a644c29e77e85a3a772fdc7a040653644a808516ae75b98ff"
+    },
+    {
+      "path": "aureon/api/generation_bridges.py",
+      "source_bytes": 19065,
+      "source_sha256": "715d3df21a55dce99fdc125571fa6a8b137c927945e6f40780a902c5e5e49f1e",
+      "wheel_bytes": 19065,
+      "wheel_sha256": "715d3df21a55dce99fdc125571fa6a8b137c927945e6f40780a902c5e5e49f1e"
+    },
+    {
+      "path": "aureon/api/generation_bridges.pyi",
+      "source_bytes": 2875,
+      "source_sha256": "0ad0d697215b98eb6e5ca7fb96ec2c01f8f9ba6a03265d7da4fa002321a6cd71",
+      "wheel_bytes": 2875,
+      "wheel_sha256": "0ad0d697215b98eb6e5ca7fb96ec2c01f8f9ba6a03265d7da4fa002321a6cd71"
+    },
+    {
+      "path": "aureon/api/generation_engine.py",
+      "source_bytes": 25604,
+      "source_sha256": "e4be4b2b50bb6fd15bc53e19c52921db57c9cd791fd46132a1b9fd59b0b6ef35",
+      "wheel_bytes": 25604,
+      "wheel_sha256": "e4be4b2b50bb6fd15bc53e19c52921db57c9cd791fd46132a1b9fd59b0b6ef35"
+    },
+    {
+      "path": "aureon/api/generation_engine.pyi",
+      "source_bytes": 2764,
+      "source_sha256": "231a5872e57b2ad006971154b5b8a771e30313e31441be1a2b3f5a6791843443",
+      "wheel_bytes": 2764,
+      "wheel_sha256": "231a5872e57b2ad006971154b5b8a771e30313e31441be1a2b3f5a6791843443"
+    },
+    {
+      "path": "aureon/api/generation_group_queue.py",
+      "source_bytes": 9276,
+      "source_sha256": "f119e5d8cadeecfc412051b30211a1ef2486877cbf60fb37de75abf93a0d2cf0",
+      "wheel_bytes": 9276,
+      "wheel_sha256": "f119e5d8cadeecfc412051b30211a1ef2486877cbf60fb37de75abf93a0d2cf0"
+    },
+    {
+      "path": "aureon/api/generation_pair_queue.py",
+      "source_bytes": 912,
+      "source_sha256": "2ff91b45cd4d064318a79f59c073c3233b7a95abeeb73f435129a9abb9074832",
+      "wheel_bytes": 912,
+      "wheel_sha256": "2ff91b45cd4d064318a79f59c073c3233b7a95abeeb73f435129a9abb9074832"
+    },
+    {
+      "path": "aureon/api/generation_parallel.py",
+      "source_bytes": 10007,
+      "source_sha256": "4f0b30e135ccd3b5c082118a6ac62552fcc454c845f296f62b4e27de288a0632",
+      "wheel_bytes": 10007,
+      "wheel_sha256": "4f0b30e135ccd3b5c082118a6ac62552fcc454c845f296f62b4e27de288a0632"
+    },
+    {
+      "path": "aureon/api/generation_queue.py",
+      "source_bytes": 16725,
+      "source_sha256": "ad6c9dbb5c2c6c26ccfcd908cdad95e0361c77aabd4917b86b4096033e7997d7",
+      "wheel_bytes": 16725,
+      "wheel_sha256": "ad6c9dbb5c2c6c26ccfcd908cdad95e0361c77aabd4917b86b4096033e7997d7"
+    },
+    {
+      "path": "aureon/api/generation_queue.pyi",
+      "source_bytes": 806,
+      "source_sha256": "1310e66aa6d94c84eaaaa2b8015911f8f3229ed57dde8516b742a6373922bfa5",
+      "wheel_bytes": 806,
+      "wheel_sha256": "1310e66aa6d94c84eaaaa2b8015911f8f3229ed57dde8516b742a6373922bfa5"
+    },
+    {
+      "path": "aureon/api/gpu_devices.py",
+      "source_bytes": 7741,
+      "source_sha256": "e0b35ca0c13987ed3c47d09c2b68cbb9a19bd103420c639682156604be2fc0a9",
+      "wheel_bytes": 7741,
+      "wheel_sha256": "e0b35ca0c13987ed3c47d09c2b68cbb9a19bd103420c639682156604be2fc0a9"
+    },
+    {
+      "path": "aureon/api/group_generation.py",
+      "source_bytes": 12026,
+      "source_sha256": "cda2715102d3b5d69237d27acd882d414f429e817b826148a7fa115c9fbbd9a4",
+      "wheel_bytes": 12026,
+      "wheel_sha256": "cda2715102d3b5d69237d27acd882d414f429e817b826148a7fa115c9fbbd9a4"
+    },
+    {
+      "path": "aureon/api/lane_generation.py",
+      "source_bytes": 2056,
+      "source_sha256": "bdbdb9cc2e4afbdcb9cee584ac0485d8bfea4355b2e6be02b66ac2db8c6d4833",
+      "wheel_bytes": 2056,
+      "wheel_sha256": "bdbdb9cc2e4afbdcb9cee584ac0485d8bfea4355b2e6be02b66ac2db8c6d4833"
+    },
+    {
+      "path": "aureon/api/lifecycle.py",
+      "source_bytes": 727,
+      "source_sha256": "7ffe65478c6d4d88aa0aaf0b67ccd5a619114b12b2332496b6172ea0daed3b5f",
+      "wheel_bytes": 727,
+      "wheel_sha256": "7ffe65478c6d4d88aa0aaf0b67ccd5a619114b12b2332496b6172ea0daed3b5f"
+    },
+    {
+      "path": "aureon/api/memory_input.py",
+      "source_bytes": 9193,
+      "source_sha256": "241cff977ff042f63dcbe645f9bf291497c472195ea8e61383773e33e0fa9009",
+      "wheel_bytes": 9193,
+      "wheel_sha256": "241cff977ff042f63dcbe645f9bf291497c472195ea8e61383773e33e0fa9009"
+    },
+    {
+      "path": "aureon/api/memory_input.pyi",
+      "source_bytes": 907,
+      "source_sha256": "2d8811add85c831c862119768fd4e8a59b994af94a48546e959cea0ac9da8165",
+      "wheel_bytes": 907,
+      "wheel_sha256": "2d8811add85c831c862119768fd4e8a59b994af94a48546e959cea0ac9da8165"
+    },
+    {
+      "path": "aureon/api/model_bridge.py",
+      "source_bytes": 582,
+      "source_sha256": "1379088ba0480df02bed6a794e5888051fcaad5e2dbc120605c30a5e20adf4b8",
+      "wheel_bytes": 582,
+      "wheel_sha256": "1379088ba0480df02bed6a794e5888051fcaad5e2dbc120605c30a5e20adf4b8"
+    },
+    {
+      "path": "aureon/api/model_pool.py",
+      "source_bytes": 67118,
+      "source_sha256": "31b671a6cf63f25480c6b987fa8953b1374b70a4020336aa4304347a4073390c",
+      "wheel_bytes": 67118,
+      "wheel_sha256": "31b671a6cf63f25480c6b987fa8953b1374b70a4020336aa4304347a4073390c"
+    },
+    {
+      "path": "aureon/api/models.py",
+      "source_bytes": 17614,
+      "source_sha256": "8de8483c22863819e688e5869fa88ac1d89bcd7309304316357a3b39a7891e59",
+      "wheel_bytes": 17614,
+      "wheel_sha256": "8de8483c22863819e688e5869fa88ac1d89bcd7309304316357a3b39a7891e59"
+    },
+    {
+      "path": "aureon/api/models.pyi",
+      "source_bytes": 3926,
+      "source_sha256": "5aa2ddc7dadeccd0a96f2958eeb91b1e129618650f07ea979cb988d8cd326232",
+      "wheel_bytes": 3926,
+      "wheel_sha256": "5aa2ddc7dadeccd0a96f2958eeb91b1e129618650f07ea979cb988d8cd326232"
+    },
+    {
+      "path": "aureon/api/parallel_policy.py",
+      "source_bytes": 6125,
+      "source_sha256": "22fc93916c6c9bb438b5850cbef2730b5b3fb73654f1a47fb207f79945c0320e",
+      "wheel_bytes": 6125,
+      "wheel_sha256": "22fc93916c6c9bb438b5850cbef2730b5b3fb73654f1a47fb207f79945c0320e"
+    },
+    {
+      "path": "aureon/api/pool_placement.py",
+      "source_bytes": 354,
+      "source_sha256": "47c7b35a0d2b6d3f56004a0a6396b7c330a600d9b4b774584abf49c7339bf330",
+      "wheel_bytes": 354,
+      "wheel_sha256": "47c7b35a0d2b6d3f56004a0a6396b7c330a600d9b4b774584abf49c7339bf330"
+    },
+    {
+      "path": "aureon/api/precision.py",
+      "source_bytes": 10232,
+      "source_sha256": "566495c2d259f5333ae9f1e22cb04cd27cdcc41519c793117aece6400d20ad13",
+      "wheel_bytes": 10232,
+      "wheel_sha256": "566495c2d259f5333ae9f1e22cb04cd27cdcc41519c793117aece6400d20ad13"
+    },
+    {
+      "path": "aureon/api/preprocessing.py",
+      "source_bytes": 325,
+      "source_sha256": "f75049905d47f9a2d85c17f3405770a2e560d3be51ac1b2174f5f83811738a4b",
+      "wheel_bytes": 325,
+      "wheel_sha256": "f75049905d47f9a2d85c17f3405770a2e560d3be51ac1b2174f5f83811738a4b"
+    },
+    {
+      "path": "aureon/api/profiles.py",
+      "source_bytes": 3254,
+      "source_sha256": "b3d6025ca80e3cf17c0e26b64acd6bc09c0aaa7459becbeca37499974aab1b0e",
+      "wheel_bytes": 3254,
+      "wheel_sha256": "b3d6025ca80e3cf17c0e26b64acd6bc09c0aaa7459becbeca37499974aab1b0e"
+    },
+    {
+      "path": "aureon/api/profiles.pyi",
+      "source_bytes": 204,
+      "source_sha256": "c427eb56932da50f48cf2bdb36db89fae18f10092dadf17d1b6e1b35f807bbe4",
+      "wheel_bytes": 204,
+      "wheel_sha256": "c427eb56932da50f48cf2bdb36db89fae18f10092dadf17d1b6e1b35f807bbe4"
+    },
+    {
+      "path": "aureon/api/resource_policy.py",
+      "source_bytes": 519,
+      "source_sha256": "11f64faf77f9b3d47fb777a947b01e39e30ce4204c158aebcc356ba413625d33",
+      "wheel_bytes": 519,
+      "wheel_sha256": "11f64faf77f9b3d47fb777a947b01e39e30ce4204c158aebcc356ba413625d33"
+    },
+    {
+      "path": "aureon/api/routing.py",
+      "source_bytes": 395,
+      "source_sha256": "ae509e218cd19f89693b14664c5cd7b82eb920edf7fd91cc3221295d58870cea",
+      "wheel_bytes": 395,
+      "wheel_sha256": "ae509e218cd19f89693b14664c5cd7b82eb920edf7fd91cc3221295d58870cea"
+    },
+    {
+      "path": "aureon/api/routing.pyi",
+      "source_bytes": 260,
+      "source_sha256": "36812b4a83155281444320f9e1e162cf3d09a7dfb11bd99ee830a0990321096c",
+      "wheel_bytes": 260,
+      "wheel_sha256": "36812b4a83155281444320f9e1e162cf3d09a7dfb11bd99ee830a0990321096c"
+    },
+    {
+      "path": "aureon/api/scene_generation.py",
+      "source_bytes": 18343,
+      "source_sha256": "731dbcef6926dd0d2be5c4323fe4572a7e1d34da107db773674fb82191c01b14",
+      "wheel_bytes": 18343,
+      "wheel_sha256": "731dbcef6926dd0d2be5c4323fe4572a7e1d34da107db773674fb82191c01b14"
+    },
+    {
+      "path": "aureon/api/selected_scene.py",
+      "source_bytes": 2494,
+      "source_sha256": "3aa310609392dbbae5b49d6640bef02875df61c7a4c82c84b15c520fc90486c7",
+      "wheel_bytes": 2494,
+      "wheel_sha256": "3aa310609392dbbae5b49d6640bef02875df61c7a4c82c84b15c520fc90486c7"
+    },
+    {
+      "path": "aureon/api/session.py",
+      "source_bytes": 20423,
+      "source_sha256": "d6039112594d315adfffd408354788129de935759b0cc17c80bf64d52eb8c6b0",
+      "wheel_bytes": 20423,
+      "wheel_sha256": "d6039112594d315adfffd408354788129de935759b0cc17c80bf64d52eb8c6b0"
+    },
+    {
+      "path": "aureon/api/session.pyi",
+      "source_bytes": 1029,
+      "source_sha256": "bd6995b2c5f422e029ede2e2ea3c4a1cb16d85596d1f3792e79172f92705bd95",
+      "wheel_bytes": 1029,
+      "wheel_sha256": "bd6995b2c5f422e029ede2e2ea3c4a1cb16d85596d1f3792e79172f92705bd95"
+    },
+    {
+      "path": "aureon/api/spatial.py",
+      "source_bytes": 35122,
+      "source_sha256": "7773dc41eba8089d807cf0446d2c180655928259249f9c4dda60a09f73cc1ad5",
+      "wheel_bytes": 35122,
+      "wheel_sha256": "7773dc41eba8089d807cf0446d2c180655928259249f9c4dda60a09f73cc1ad5"
+    },
+    {
+      "path": "aureon/api/spatial.pyi",
+      "source_bytes": 2622,
+      "source_sha256": "f11b346de5f59b0bb01a4e42b69d1b2522bfa792124a84e848a34ce732bed40c",
+      "wheel_bytes": 2622,
+      "wheel_sha256": "f11b346de5f59b0bb01a4e42b69d1b2522bfa792124a84e848a34ce732bed40c"
+    },
+    {
+      "path": "aureon/api/stac.py",
+      "source_bytes": 15656,
+      "source_sha256": "b5defce567ddf91948526a4a39a4e980f9cfa817250427b3c0e2887c12f01eb3",
+      "wheel_bytes": 15656,
+      "wheel_sha256": "b5defce567ddf91948526a4a39a4e980f9cfa817250427b3c0e2887c12f01eb3"
+    },
+    {
+      "path": "aureon/api/temporal.py",
+      "source_bytes": 9587,
+      "source_sha256": "bd41b2da2ed1daf540a04a54925dd424de37073996cff1fd70bc78d9a018b52d",
+      "wheel_bytes": 9587,
+      "wheel_sha256": "bd41b2da2ed1daf540a04a54925dd424de37073996cff1fd70bc78d9a018b52d"
+    },
+    {
+      "path": "aureon/api/terramind_encoder.py",
+      "source_bytes": 13507,
+      "source_sha256": "cb6c98cd84a903972c15c427c48400dac53d9fd47b259db5e86bdac960b67861",
+      "wheel_bytes": 13507,
+      "wheel_sha256": "cb6c98cd84a903972c15c427c48400dac53d9fd47b259db5e86bdac960b67861"
+    },
+    {
+      "path": "aureon/api/terratorch_task.py",
+      "source_bytes": 455,
+      "source_sha256": "873a41e9631e56e7449a06fe4b69af0940de82b25f002f3b6c06803b7c8c5343",
+      "wheel_bytes": 455,
+      "wheel_sha256": "873a41e9631e56e7449a06fe4b69af0940de82b25f002f3b6c06803b7c8c5343"
+    },
+    {
+      "path": "aureon/api/upstream_task.py",
+      "source_bytes": 413,
+      "source_sha256": "1e1dad41335977b314686880b04f1158c039f848b12192f232862aabc0d6a6ba",
+      "wheel_bytes": 413,
+      "wheel_sha256": "1e1dad41335977b314686880b04f1158c039f848b12192f232862aabc0d6a6ba"
+    },
+    {
+      "path": "aureon/api/v1.py",
+      "source_bytes": 7003,
+      "source_sha256": "50932331c1447a29d3746dadd70cd8c45bd19a75b3e4fd1233271b3265d3ad0f",
+      "wheel_bytes": 7003,
+      "wheel_sha256": "50932331c1447a29d3746dadd70cd8c45bd19a75b3e4fd1233271b3265d3ad0f"
+    },
+    {
+      "path": "aureon/api/v1.pyi",
+      "source_bytes": 628,
+      "source_sha256": "c479be58fd6d87df326fae6fff59e3bb00350d9b92026d72fd367443647b8e3b",
+      "wheel_bytes": 628,
+      "wheel_sha256": "c479be58fd6d87df326fae6fff59e3bb00350d9b92026d72fd367443647b8e3b"
+    },
+    {
+      "path": "aureon/bundle_storage.py",
+      "source_bytes": 11996,
+      "source_sha256": "c2b20e7341284cdfa0fbeccaeac3051aaf69d43d1b124299976228d32097cd61",
+      "wheel_bytes": 11996,
+      "wheel_sha256": "c2b20e7341284cdfa0fbeccaeac3051aaf69d43d1b124299976228d32097cd61"
+    },
+    {
+      "path": "aureon/catalog.py",
+      "source_bytes": 11436,
+      "source_sha256": "c426ec7b0fa218728f72aa98c1d58d65682f4fb5836c30875322fc9ff6cc2fa1",
+      "wheel_bytes": 11436,
+      "wheel_sha256": "c426ec7b0fa218728f72aa98c1d58d65682f4fb5836c30875322fc9ff6cc2fa1"
+    },
+    {
+      "path": "aureon/checkpoint_bundle.py",
+      "source_bytes": 16253,
+      "source_sha256": "121a70f7f396229b4c9d2c25b429c01978e3b9dddf0a23f0881e85db45359fb6",
+      "wheel_bytes": 16253,
+      "wheel_sha256": "121a70f7f396229b4c9d2c25b429c01978e3b9dddf0a23f0881e85db45359fb6"
+    },
+    {
+      "path": "aureon/client.py",
+      "source_bytes": 24108,
+      "source_sha256": "5eafdc7fedd66061087843ecc3a071c868aa2b9320948d7cf12ad93b1b246659",
+      "wheel_bytes": 24108,
+      "wheel_sha256": "5eafdc7fedd66061087843ecc3a071c868aa2b9320948d7cf12ad93b1b246659"
+    },
+    {
+      "path": "aureon/client.pyi",
+      "source_bytes": 1868,
+      "source_sha256": "1026c46ed7875690565010d55b003008ccb0a967d18aa6c6cdbaff280b0fe5ae",
+      "wheel_bytes": 1868,
+      "wheel_sha256": "1026c46ed7875690565010d55b003008ccb0a967d18aa6c6cdbaff280b0fe5ae"
+    },
+    {
+      "path": "aureon/cloud/__init__.py",
+      "source_bytes": 167,
+      "source_sha256": "237e3d48523a3e8ab4c62d4da6245eb1f0fcedbadecbca6bd6da1c49c4aee096",
+      "wheel_bytes": 167,
+      "wheel_sha256": "237e3d48523a3e8ab4c62d4da6245eb1f0fcedbadecbca6bd6da1c49c4aee096"
+    },
+    {
+      "path": "aureon/cloud/client.py",
+      "source_bytes": 12560,
+      "source_sha256": "bd2e63829beebc9c64dc1d896cbcb540a7fadf5164fd1c4c11bb947a4e0a2918",
+      "wheel_bytes": 12560,
+      "wheel_sha256": "bd2e63829beebc9c64dc1d896cbcb540a7fadf5164fd1c4c11bb947a4e0a2918"
+    },
+    {
+      "path": "aureon/cloud/contracts.py",
+      "source_bytes": 5051,
+      "source_sha256": "ad7ca1da228c9f37cc098e6ec6ef4e1c577fabfd47bc84e073904842955ce477",
+      "wheel_bytes": 5051,
+      "wheel_sha256": "ad7ca1da228c9f37cc098e6ec6ef4e1c577fabfd47bc84e073904842955ce477"
+    },
+    {
+      "path": "aureon/cloud/control.py",
+      "source_bytes": 44974,
+      "source_sha256": "83f74e455b47c2c763201f457d7c9076adab41a5067a65617261c1c50c0e515f",
+      "wheel_bytes": 44974,
+      "wheel_sha256": "83f74e455b47c2c763201f457d7c9076adab41a5067a65617261c1c50c0e515f"
+    },
+    {
+      "path": "aureon/cloud/engine.py",
+      "source_bytes": 11561,
+      "source_sha256": "ec5df6a9db66590c03fb01f718d54454b75b27d8efb143ef69146e1f03db3545",
+      "wheel_bytes": 11561,
+      "wheel_sha256": "ec5df6a9db66590c03fb01f718d54454b75b27d8efb143ef69146e1f03db3545"
+    },
+    {
+      "path": "aureon/cloud/http.py",
+      "source_bytes": 12079,
+      "source_sha256": "4fc8c7a6406686a1f80f4ea14976e11811e1e9ce958e8e44cb087d2660cdb4fd",
+      "wheel_bytes": 12079,
+      "wheel_sha256": "4fc8c7a6406686a1f80f4ea14976e11811e1e9ce958e8e44cb087d2660cdb4fd"
+    },
+    {
+      "path": "aureon/cloud/io_types.py",
+      "source_bytes": 664,
+      "source_sha256": "8b155be0a4fec8a43a3aff0bffb7c183f5a50175b28a6c1867e61786b2d51f26",
+      "wheel_bytes": 664,
+      "wheel_sha256": "8b155be0a4fec8a43a3aff0bffb7c183f5a50175b28a6c1867e61786b2d51f26"
+    },
+    {
+      "path": "aureon/cloud/profiles.py",
+      "source_bytes": 649,
+      "source_sha256": "8a0e7a3617845c0aae7618fa4cb460224d22be265f0971dde74beece1971a0d1",
+      "wheel_bytes": 649,
+      "wheel_sha256": "8a0e7a3617845c0aae7618fa4cb460224d22be265f0971dde74beece1971a0d1"
+    },
+    {
+      "path": "aureon/cloud/single_pass_source.py",
+      "source_bytes": 5170,
+      "source_sha256": "e0d305b8a669ee2e4624c679ff0e504deb1f8c625642a93bdff3e5201121c6b3",
+      "wheel_bytes": 5170,
+      "wheel_sha256": "e0d305b8a669ee2e4624c679ff0e504deb1f8c625642a93bdff3e5201121c6b3"
+    },
+    {
+      "path": "aureon/cloud/stream_guarded.py",
+      "source_bytes": 12633,
+      "source_sha256": "c70f403436a64ca78c240b65bcf5994840295a67a50fe28818766bf1b832b6cc",
+      "wheel_bytes": 12633,
+      "wheel_sha256": "c70f403436a64ca78c240b65bcf5994840295a67a50fe28818766bf1b832b6cc"
+    },
+    {
+      "path": "aureon/copgen_native/NOTICE.md",
+      "source_bytes": 1495,
+      "source_sha256": "11e7884228079da2122839b89e2adbb85885e2aca9b9eb2c8faa5dddab0cf258",
+      "wheel_bytes": 1495,
+      "wheel_sha256": "11e7884228079da2122839b89e2adbb85885e2aca9b9eb2c8faa5dddab0cf258"
+    },
+    {
+      "path": "aureon/copgen_native/PROFILE.md",
+      "source_bytes": 8257,
+      "source_sha256": "567bbfeb72422528d195bf93fd2aac619a59da241f4bdf12227d36323ec344b7",
+      "wheel_bytes": 8257,
+      "wheel_sha256": "567bbfeb72422528d195bf93fd2aac619a59da241f4bdf12227d36323ec344b7"
+    },
+    {
+      "path": "aureon/copgen_native/__init__.py",
+      "source_bytes": 369,
+      "source_sha256": "a9e56b7a59b79a62a0ab28ffef13b553f1b93d0cd99b8eb2e382417d2d007bd6",
+      "wheel_bytes": 369,
+      "wheel_sha256": "a9e56b7a59b79a62a0ab28ffef13b553f1b93d0cd99b8eb2e382417d2d007bd6"
+    },
+    {
+      "path": "aureon/copgen_native/contracts.py",
+      "source_bytes": 5011,
+      "source_sha256": "efa038d06981bef3222b4f13f803ebc901dfb3d2eecb8798578821b05676ba81",
+      "wheel_bytes": 5011,
+      "wheel_sha256": "efa038d06981bef3222b4f13f803ebc901dfb3d2eecb8798578821b05676ba81"
+    },
+    {
+      "path": "aureon/copgen_native/engine.py",
+      "source_bytes": 9830,
+      "source_sha256": "fce60a030ad66abc07fe84562a06f0856c29e9318d20f22d2a5429113ff02c2e",
+      "wheel_bytes": 9830,
+      "wheel_sha256": "fce60a030ad66abc07fe84562a06f0856c29e9318d20f22d2a5429113ff02c2e"
+    },
+    {
+      "path": "aureon/copgen_native/pins.json",
+      "source_bytes": 3079,
+      "source_sha256": "adb23006a5f693aec256602d0303c965759ee5799479a0070e9522e4fa6b8021",
+      "wheel_bytes": 3079,
+      "wheel_sha256": "adb23006a5f693aec256602d0303c965759ee5799479a0070e9522e4fa6b8021"
+    },
+    {
+      "path": "aureon/copgen_native/profiles.py",
+      "source_bytes": 2175,
+      "source_sha256": "c6fd11a206559bffb0fa87b6e85c66606b3add7aa99ff5eb61e5008772e51c98",
+      "wheel_bytes": 2175,
+      "wheel_sha256": "c6fd11a206559bffb0fa87b6e85c66606b3add7aa99ff5eb61e5008772e51c98"
+    },
+    {
+      "path": "aureon/copgen_native/requirements-torch210.txt",
+      "source_bytes": 409,
+      "source_sha256": "02e189a829c96ce34acd0ccc953ca0b4df785385f7aac95d8f14000df73a5a31",
+      "wheel_bytes": 409,
+      "wheel_sha256": "02e189a829c96ce34acd0ccc953ca0b4df785385f7aac95d8f14000df73a5a31"
+    },
+    {
+      "path": "aureon/copgen_native/requirements.txt",
+      "source_bytes": 491,
+      "source_sha256": "468a838b2acd4891e5cde848f5fca1e2428f69f3dc55f0a68d57087628538b42",
+      "wheel_bytes": 491,
+      "wheel_sha256": "468a838b2acd4891e5cde848f5fca1e2428f69f3dc55f0a68d57087628538b42"
+    },
+    {
+      "path": "aureon/copgen_native/runtime.py",
+      "source_bytes": 14728,
+      "source_sha256": "666eba7aa76ce1794990ede3681b2fc0a90137ee86d145fe30e77505f9af634c",
+      "wheel_bytes": 14728,
+      "wheel_sha256": "666eba7aa76ce1794990ede3681b2fc0a90137ee86d145fe30e77505f9af634c"
+    },
+    {
+      "path": "aureon/cuda_graph.py",
+      "source_bytes": 11529,
+      "source_sha256": "25aeb2c91220d61919ae0d3834c3529a622610b5dcc5b958515bd24c133fa467",
+      "wheel_bytes": 11529,
+      "wheel_sha256": "25aeb2c91220d61919ae0d3834c3529a622610b5dcc5b958515bd24c133fa467"
+    },
+    {
+      "path": "aureon/experimental_precision.py",
+      "source_bytes": 13437,
+      "source_sha256": "a81d30fb4fff1751ec32f6645d0a9e58c269120d99f433e1af497a755d3cd8ca",
+      "wheel_bytes": 13437,
+      "wheel_sha256": "a81d30fb4fff1751ec32f6645d0a9e58c269120d99f433e1af497a755d3cd8ca"
+    },
+    {
+      "path": "aureon/graph_pipeline.py",
+      "source_bytes": 21203,
+      "source_sha256": "5b7e75725bf5ad0776b15a6b0501c41a6890092b85896663033e4f639cd0c637",
+      "wheel_bytes": 21203,
+      "wheel_sha256": "5b7e75725bf5ad0776b15a6b0501c41a6890092b85896663033e4f639cd0c637"
+    },
+    {
+      "path": "aureon/integrations/__init__.py",
+      "source_bytes": 143,
+      "source_sha256": "e16f7d47e546af4ac9ebfc4c24d170e3fcaaffa746ee53abef33bf3dc43233aa",
+      "wheel_bytes": 143,
+      "wheel_sha256": "e16f7d47e546af4ac9ebfc4c24d170e3fcaaffa746ee53abef33bf3dc43233aa"
+    },
+    {
+      "path": "aureon/integrations/borrowed_model.py",
+      "source_bytes": 17258,
+      "source_sha256": "d65e8fb75f75dba9af6a2921c1802285ab07774fb98abd361b3e0870ccd088c3",
+      "wheel_bytes": 17258,
+      "wheel_sha256": "d65e8fb75f75dba9af6a2921c1802285ab07774fb98abd361b3e0870ccd088c3"
+    },
+    {
+      "path": "aureon/integrations/model_bridge.py",
+      "source_bytes": 10439,
+      "source_sha256": "25f46f0039cc3455fbd51cd4a747be15bf07aa1969518cd358195bf1033297bf",
+      "wheel_bytes": 10439,
+      "wheel_sha256": "25f46f0039cc3455fbd51cd4a747be15bf07aa1969518cd358195bf1033297bf"
+    },
+    {
+      "path": "aureon/integrations/preprocessing.py",
+      "source_bytes": 5412,
+      "source_sha256": "7d6304d45a0d6862fc984b63239ce737e2f0f8fd3e31c7d2c6d4c56e4635a65a",
+      "wheel_bytes": 5412,
+      "wheel_sha256": "7d6304d45a0d6862fc984b63239ce737e2f0f8fd3e31c7d2c6d4c56e4635a65a"
+    },
+    {
+      "path": "aureon/integrations/terratorch_task.py",
+      "source_bytes": 10401,
+      "source_sha256": "c77ff94834c0233c5f1b0e657a7ac6e797d717a60335f368401b9f8873e63e7a",
+      "wheel_bytes": 10401,
+      "wheel_sha256": "c77ff94834c0233c5f1b0e657a7ac6e797d717a60335f368401b9f8873e63e7a"
+    },
+    {
+      "path": "aureon/integrations/upstream_task.py",
+      "source_bytes": 9978,
+      "source_sha256": "45602ef50c0da4a134235929b675ae8e1e1f071c32a6f21c0132194ebaf891fa",
+      "wheel_bytes": 9978,
+      "wheel_sha256": "45602ef50c0da4a134235929b675ae8e1e1f071c32a6f21c0132194ebaf891fa"
+    },
+    {
+      "path": "aureon/legacy_reference.py",
+      "source_bytes": 10534,
+      "source_sha256": "217d5230ccfd285027f7277cf162513fcb361b8b06a601c924b552b80184bec9",
+      "wheel_bytes": 11121,
+      "wheel_sha256": "70b8413bacbc4c3c0d4e5ef27e2dad7082e6614cdeb93684142861c5498964af"
+    },
+    {
+      "path": "aureon/planning/__init__.py",
+      "source_bytes": 155,
+      "source_sha256": "c0debc559d5f4f2f888c8802278cafccc61b84551f84383248709f4959aa91f0",
+      "wheel_bytes": 155,
+      "wheel_sha256": "c0debc559d5f4f2f888c8802278cafccc61b84551f84383248709f4959aa91f0"
+    },
+    {
+      "path": "aureon/planning/best_runtime.py",
+      "source_bytes": 7611,
+      "source_sha256": "9fc14fa6bbcea071832c774ad4c8bbddf961ad631c57f3ff12c17efd3f5c4c51",
+      "wheel_bytes": 7611,
+      "wheel_sha256": "9fc14fa6bbcea071832c774ad4c8bbddf961ad631c57f3ff12c17efd3f5c4c51"
+    },
+    {
+      "path": "aureon/planning/pool_placement.py",
+      "source_bytes": 3288,
+      "source_sha256": "0e862e332e73244ea9572d9b943f40fbea0dfe7c7bf33baef0072a512e7b9367",
+      "wheel_bytes": 3288,
+      "wheel_sha256": "0e862e332e73244ea9572d9b943f40fbea0dfe7c7bf33baef0072a512e7b9367"
+    },
+    {
+      "path": "aureon/planning/resource_policy.py",
+      "source_bytes": 7977,
+      "source_sha256": "047ccadf387520a3b2ef4048fb4214f9b9ee4e0018b37f7a11e3c7bfbcb2cf81",
+      "wheel_bytes": 7977,
+      "wheel_sha256": "047ccadf387520a3b2ef4048fb4214f9b9ee4e0018b37f7a11e3c7bfbcb2cf81"
+    },
+    {
+      "path": "aureon/planning/routing.py",
+      "source_bytes": 6591,
+      "source_sha256": "7010b80472c7f1533d74903947d522321724006b1a92db463f78c2196227e666",
+      "wheel_bytes": 6591,
+      "wheel_sha256": "7010b80472c7f1533d74903947d522321724006b1a92db463f78c2196227e666"
+    },
+    {
+      "path": "aureon/planning/routing.pyi",
+      "source_bytes": 1070,
+      "source_sha256": "c833bb9d84b92fc131396d7a93b7ff560a3afb5cbb68468829a2dacd56f8f06a",
+      "wheel_bytes": 1070,
+      "wheel_sha256": "c833bb9d84b92fc131396d7a93b7ff560a3afb5cbb68468829a2dacd56f8f06a"
+    },
+    {
+      "path": "aureon/preflight.py",
+      "source_bytes": 4005,
+      "source_sha256": "4f1f60cc8fad40104b32f1648b5e4a88053eaefc4183231d7ee46fb3a1291e2d",
+      "wheel_bytes": 4005,
+      "wheel_sha256": "4f1f60cc8fad40104b32f1648b5e4a88053eaefc4183231d7ee46fb3a1291e2d"
+    },
+    {
+      "path": "aureon/prepare/__init__.py",
+      "source_bytes": 733,
+      "source_sha256": "84e711273e06e20b8d572f78c65506d388b92d42e6a57db53c2cfab311be5765",
+      "wheel_bytes": 733,
+      "wheel_sha256": "84e711273e06e20b8d572f78c65506d388b92d42e6a57db53c2cfab311be5765"
+    },
+    {
+      "path": "aureon/prepare/__main__.py",
+      "source_bytes": 2130,
+      "source_sha256": "950142c6356384a242318075fd241766ae39005c09ca0ec7aedbdb0087b91248",
+      "wheel_bytes": 2130,
+      "wheel_sha256": "950142c6356384a242318075fd241766ae39005c09ca0ec7aedbdb0087b91248"
+    },
+    {
+      "path": "aureon/prepare/local.py",
+      "source_bytes": 28414,
+      "source_sha256": "827d9298512d8b4162aa1b7da2af8d4f55ebe3f8c2937354f8343b6172e682c7",
+      "wheel_bytes": 28414,
+      "wheel_sha256": "827d9298512d8b4162aa1b7da2af8d4f55ebe3f8c2937354f8343b6172e682c7"
+    },
+    {
+      "path": "aureon/process_memory.py",
+      "source_bytes": 1976,
+      "source_sha256": "7555a0fb1f759e2ce2178611444a131454cebb9f692393ec4426e7dec47acb5e",
+      "wheel_bytes": 1976,
+      "wheel_sha256": "7555a0fb1f759e2ce2178611444a131454cebb9f692393ec4426e7dec47acb5e"
+    },
+    {
+      "path": "aureon/py.typed",
+      "source_bytes": 0,
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "wheel_bytes": 0,
+      "wheel_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "aureon/recipe.py",
+      "source_bytes": 12194,
+      "source_sha256": "fec51eb192077357bdc05d2684d38cd0f7202664dde94d08128f298fdca7afb9",
+      "wheel_bytes": 12194,
+      "wheel_sha256": "fec51eb192077357bdc05d2684d38cd0f7202664dde94d08128f298fdca7afb9"
+    },
+    {
+      "path": "aureon/reference.py",
+      "source_bytes": 7773,
+      "source_sha256": "ae14fa9d837fd63aa56e0a3a3ab9ebfb04c98ee3e67db8cea76dab2d749ac93f",
+      "wheel_bytes": 7773,
+      "wheel_sha256": "ae14fa9d837fd63aa56e0a3a3ab9ebfb04c98ee3e67db8cea76dab2d749ac93f"
+    },
+    {
+      "path": "aureon/runtime.py",
+      "source_bytes": 10005,
+      "source_sha256": "e85ddff69c14b18c6beba2164208a71bb7d3174d367a644fe63f2631e64896ff",
+      "wheel_bytes": 10005,
+      "wheel_sha256": "e85ddff69c14b18c6beba2164208a71bb7d3174d367a644fe63f2631e64896ff"
+    },
+    {
+      "path": "aureon/scaling/__init__.py",
+      "source_bytes": 750,
+      "source_sha256": "96a315fb9880c5faffb562e7ec1820cfb1e3359b433937792295e45838998a90",
+      "wheel_bytes": 750,
+      "wheel_sha256": "96a315fb9880c5faffb562e7ec1820cfb1e3359b433937792295e45838998a90"
+    },
+    {
+      "path": "aureon/scaling/adapters.py",
+      "source_bytes": 3531,
+      "source_sha256": "4e3599192a869bd55dd62eb2c2fb4d9c116cabb5bfaa616ee59d82166fbe8f21",
+      "wheel_bytes": 3531,
+      "wheel_sha256": "4e3599192a869bd55dd62eb2c2fb4d9c116cabb5bfaa616ee59d82166fbe8f21"
+    },
+    {
+      "path": "aureon/scaling/artifacts.py",
+      "source_bytes": 4546,
+      "source_sha256": "5ef37f23218a9db916296d06fe5d91ecb98616242c89c1331e22b4aad9f4b5d9",
+      "wheel_bytes": 4546,
+      "wheel_sha256": "5ef37f23218a9db916296d06fe5d91ecb98616242c89c1331e22b4aad9f4b5d9"
+    },
+    {
+      "path": "aureon/scaling/broker.py",
+      "source_bytes": 13142,
+      "source_sha256": "240993215494dd9928b4192681c9248e9814169ec20cc5e69c790957631b8bb1",
+      "wheel_bytes": 13142,
+      "wheel_sha256": "240993215494dd9928b4192681c9248e9814169ec20cc5e69c790957631b8bb1"
+    },
+    {
+      "path": "aureon/scaling/pipeline.py",
+      "source_bytes": 10671,
+      "source_sha256": "d89099a1c6cea468087945c1f0945afea4db15b9fbf18295e48a04cbbc05a097",
+      "wheel_bytes": 10671,
+      "wheel_sha256": "d89099a1c6cea468087945c1f0945afea4db15b9fbf18295e48a04cbbc05a097"
+    },
+    {
+      "path": "aureon/scaling/transport.py",
+      "source_bytes": 19327,
+      "source_sha256": "bf1e19af263f73fffe6ba47e359b40f61d59c5bc61348fc5f29acf76d4c6c9b9",
+      "wheel_bytes": 19327,
+      "wheel_sha256": "bf1e19af263f73fffe6ba47e359b40f61d59c5bc61348fc5f29acf76d4c6c9b9"
+    },
+    {
+      "path": "aureon/scaling/worker.py",
+      "source_bytes": 4231,
+      "source_sha256": "5f315a19201cd7aedb8eb606c9c70eda833b8286a8f59d0feb14fca9afe7fc4b",
+      "wheel_bytes": 4231,
+      "wheel_sha256": "5f315a19201cd7aedb8eb606c9c70eda833b8286a8f59d0feb14fca9afe7fc4b"
+    },
+    {
+      "path": "aureon/scene_api/__init__.py",
+      "source_bytes": 77,
+      "source_sha256": "9beb54f69787b120a7002dacf791a1f0b9f96e4b05d9ce583dbff953508d47bf",
+      "wheel_bytes": 77,
+      "wheel_sha256": "9beb54f69787b120a7002dacf791a1f0b9f96e4b05d9ce583dbff953508d47bf"
+    },
+    {
+      "path": "aureon/scene_api/__main__.py",
+      "source_bytes": 11541,
+      "source_sha256": "cef960abf770b6e7a0fd33458cc30b060c5648f1f9ad68891beefdf2bc1e7b73",
+      "wheel_bytes": 11541,
+      "wheel_sha256": "cef960abf770b6e7a0fd33458cc30b060c5648f1f9ad68891beefdf2bc1e7b73"
+    },
+    {
+      "path": "aureon/scene_api/api.py",
+      "source_bytes": 33702,
+      "source_sha256": "d20cc71cb0e311b9a3a5c52fd68a42000b461e1e774e63916a55bd8717cb9051",
+      "wheel_bytes": 33702,
+      "wheel_sha256": "d20cc71cb0e311b9a3a5c52fd68a42000b461e1e774e63916a55bd8717cb9051"
+    },
+    {
+      "path": "aureon/scene_api/audit.py",
+      "source_bytes": 12688,
+      "source_sha256": "b405e9c62f6f59f98435989546ec9ae05fd1add5bba1ce19d70c8adf63ff2cb7",
+      "wheel_bytes": 12688,
+      "wheel_sha256": "b405e9c62f6f59f98435989546ec9ae05fd1add5bba1ce19d70c8adf63ff2cb7"
+    },
+    {
+      "path": "aureon/scene_api/console.py",
+      "source_bytes": 3255,
+      "source_sha256": "dcdeed7a9652f62873b863ab4b30e244419d849d2b1bb018b521addf09fcaee6",
+      "wheel_bytes": 3255,
+      "wheel_sha256": "dcdeed7a9652f62873b863ab4b30e244419d849d2b1bb018b521addf09fcaee6"
+    },
+    {
+      "path": "aureon/scene_api/contracts.py",
+      "source_bytes": 3127,
+      "source_sha256": "23185722d14dc3a86d93c3dd6af630888c6fb7fc64a0f214fb531120e285b9bf",
+      "wheel_bytes": 3127,
+      "wheel_sha256": "23185722d14dc3a86d93c3dd6af630888c6fb7fc64a0f214fb531120e285b9bf"
+    },
+    {
+      "path": "aureon/scene_api/durable.py",
+      "source_bytes": 22819,
+      "source_sha256": "5505d111aa85ce60d75fefcfb9e393387a88a18f7177fa5be7e87d66ebbd5abb",
+      "wheel_bytes": 22819,
+      "wheel_sha256": "5505d111aa85ce60d75fefcfb9e393387a88a18f7177fa5be7e87d66ebbd5abb"
+    },
+    {
+      "path": "aureon/scene_api/identity.py",
+      "source_bytes": 2600,
+      "source_sha256": "c920229b1a3c9987a55b8fb9fcf4e1c54436053597b092ab25d75bd96dc61589",
+      "wheel_bytes": 2600,
+      "wheel_sha256": "c920229b1a3c9987a55b8fb9fcf4e1c54436053597b092ab25d75bd96dc61589"
+    },
+    {
+      "path": "aureon/scene_api/stream_worker.py",
+      "source_bytes": 7910,
+      "source_sha256": "6eeb31df4d41a8b13fe3af4a2d5601f6658b5cc15e08af1db3944fc4b7a7f6e1",
+      "wheel_bytes": 7910,
+      "wheel_sha256": "6eeb31df4d41a8b13fe3af4a2d5601f6658b5cc15e08af1db3944fc4b7a7f6e1"
+    },
+    {
+      "path": "aureon/scene_api/worker.py",
+      "source_bytes": 34621,
+      "source_sha256": "519f1c87fe4bafd6fa96a6f57408b1a711e817daba9692536d3f8d73ff18cfad",
+      "wheel_bytes": 34621,
+      "wheel_sha256": "519f1c87fe4bafd6fa96a6f57408b1a711e817daba9692536d3f8d73ff18cfad"
+    },
+    {
+      "path": "aureon/scene_cli.py",
+      "source_bytes": 8042,
+      "source_sha256": "83b2ab2f0840c99091b074f2da131e5ef16a198b753e1e43e17457cdeb784945",
+      "wheel_bytes": 8042,
+      "wheel_sha256": "83b2ab2f0840c99091b074f2da131e5ef16a198b753e1e43e17457cdeb784945"
+    },
+    {
+      "path": "aureon/scene_pipeline/__init__.py",
+      "source_bytes": 145,
+      "source_sha256": "a6d08f2dda9218094470284a499c42984d7f0129c2a9e65d205678639c4ed2fa",
+      "wheel_bytes": 145,
+      "wheel_sha256": "a6d08f2dda9218094470284a499c42984d7f0129c2a9e65d205678639c4ed2fa"
+    },
+    {
+      "path": "aureon/scene_pipeline/__main__.py",
+      "source_bytes": 61,
+      "source_sha256": "ecd078d0820a271e0fe7d882613f974d487a8085fd7187477bb99aa141c5ca51",
+      "wheel_bytes": 61,
+      "wheel_sha256": "ecd078d0820a271e0fe7d882613f974d487a8085fd7187477bb99aa141c5ca51"
+    },
+    {
+      "path": "aureon/scene_pipeline/audit.py",
+      "source_bytes": 23158,
+      "source_sha256": "bf7066a4ec00981473ec02bf4808cca0bc7946bdba69505767ad70646268c1ff",
+      "wheel_bytes": 23158,
+      "wheel_sha256": "bf7066a4ec00981473ec02bf4808cca0bc7946bdba69505767ad70646268c1ff"
+    },
+    {
+      "path": "aureon/scene_pipeline/core.py",
+      "source_bytes": 7802,
+      "source_sha256": "d714f6f07196cad71a48f71ea3e0c49a5f2aeec98f859ecb866fc20358a90132",
+      "wheel_bytes": 7802,
+      "wheel_sha256": "d714f6f07196cad71a48f71ea3e0c49a5f2aeec98f859ecb866fc20358a90132"
+    },
+    {
+      "path": "aureon/scene_pipeline/georaster.py",
+      "source_bytes": 20352,
+      "source_sha256": "05d9db373e8c9f5b74323a602c994bf11fcb87553579978a0bc525af4211b4b5",
+      "wheel_bytes": 20352,
+      "wheel_sha256": "05d9db373e8c9f5b74323a602c994bf11fcb87553579978a0bc525af4211b4b5"
+    },
+    {
+      "path": "aureon/scene_pipeline/job.py",
+      "source_bytes": 27674,
+      "source_sha256": "d9bb4c760ee6ffe66bdab41eaf33ea1d0b179469b3ba352af8e48a75575c1785",
+      "wheel_bytes": 27674,
+      "wheel_sha256": "d9bb4c760ee6ffe66bdab41eaf33ea1d0b179469b3ba352af8e48a75575c1785"
+    },
+    {
+      "path": "aureon/scene_pipeline/predictor.py",
+      "source_bytes": 14753,
+      "source_sha256": "3a8186ac771e3cf2d59ad41104f806f4ddee8074ae28451f58030733c6243343",
+      "wheel_bytes": 14753,
+      "wheel_sha256": "3a8186ac771e3cf2d59ad41104f806f4ddee8074ae28451f58030733c6243343"
+    },
+    {
+      "path": "aureon/scene_pipeline/stream_audit.py",
+      "source_bytes": 7936,
+      "source_sha256": "29fc01bb968181eadacb6ea012e21ba3a9b80d2596fb791551ca1f5a7c9aa8f7",
+      "wheel_bytes": 7936,
+      "wheel_sha256": "29fc01bb968181eadacb6ea012e21ba3a9b80d2596fb791551ca1f5a7c9aa8f7"
+    },
+    {
+      "path": "aureon/scene_pipeline/stream_io.py",
+      "source_bytes": 16760,
+      "source_sha256": "725c2e34f72ac0fb095ef95815dc3118f01a90a2c755dcbc8fa8f1e21ceeeb18",
+      "wheel_bytes": 16760,
+      "wheel_sha256": "725c2e34f72ac0fb095ef95815dc3118f01a90a2c755dcbc8fa8f1e21ceeeb18"
+    },
+    {
+      "path": "aureon/scene_pipeline/streaming.py",
+      "source_bytes": 16523,
+      "source_sha256": "858ad9a5992977b2ff696fcd7263f1882d3e455f0fa855d20e87057c8ae5d7cf",
+      "wheel_bytes": 16523,
+      "wheel_sha256": "858ad9a5992977b2ff696fcd7263f1882d3e455f0fa855d20e87057c8ae5d7cf"
+    },
+    {
+      "path": "aureon/serving/__init__.py",
+      "source_bytes": 84,
+      "source_sha256": "298a4e4ea5f41a2bd916b417d0bc546adc53bb1817ad8a6b71dfa976802432dc",
+      "wheel_bytes": 84,
+      "wheel_sha256": "298a4e4ea5f41a2bd916b417d0bc546adc53bb1817ad8a6b71dfa976802432dc"
+    },
+    {
+      "path": "aureon/serving/__main__.py",
+      "source_bytes": 8764,
+      "source_sha256": "ddab3ce2e5a754a455a549ab8e89c1b847609eb3cccc667d4ec244b805d94f04",
+      "wheel_bytes": 8764,
+      "wheel_sha256": "ddab3ce2e5a754a455a549ab8e89c1b847609eb3cccc667d4ec244b805d94f04"
+    },
+    {
+      "path": "aureon/serving/backend.py",
+      "source_bytes": 15146,
+      "source_sha256": "34b789693bf1e612965e5a91bbb6a8509834062d12e79fc4c9ddea64bc8c53c0",
+      "wheel_bytes": 15146,
+      "wheel_sha256": "34b789693bf1e612965e5a91bbb6a8509834062d12e79fc4c9ddea64bc8c53c0"
+    },
+    {
+      "path": "aureon/serving/client.py",
+      "source_bytes": 10736,
+      "source_sha256": "62b58f7ee4a6bddfd76b16eac0c320f33d97c17906e84df8c6bab840e07f77a6",
+      "wheel_bytes": 10736,
+      "wheel_sha256": "62b58f7ee4a6bddfd76b16eac0c320f33d97c17906e84df8c6bab840e07f77a6"
+    },
+    {
+      "path": "aureon/serving/contracts.py",
+      "source_bytes": 8391,
+      "source_sha256": "a06d555ec08423240bd6d9e8ce076438c7aadba3b001b58bc53e9be4c6e1d133",
+      "wheel_bytes": 8391,
+      "wheel_sha256": "a06d555ec08423240bd6d9e8ce076438c7aadba3b001b58bc53e9be4c6e1d133"
+    },
+    {
+      "path": "aureon/serving/control.py",
+      "source_bytes": 27090,
+      "source_sha256": "7de824952624e98b24f6a6698b59135b922f1fa4a9fd4e6eeb6b7f8029aa46bc",
+      "wheel_bytes": 27090,
+      "wheel_sha256": "7de824952624e98b24f6a6698b59135b922f1fa4a9fd4e6eeb6b7f8029aa46bc"
+    },
+    {
+      "path": "aureon/serving/devices.py",
+      "source_bytes": 5479,
+      "source_sha256": "dc48830dafc9090d2c8918c9da8df7057e35f4cf19d1a104f673ef6052152750",
+      "wheel_bytes": 5479,
+      "wheel_sha256": "dc48830dafc9090d2c8918c9da8df7057e35f4cf19d1a104f673ef6052152750"
+    },
+    {
+      "path": "aureon/serving/errors.py",
+      "source_bytes": 1408,
+      "source_sha256": "affa05db9f133a2a4435ea08158223073f965504e1b842267aa9249d1931b2da",
+      "wheel_bytes": 1408,
+      "wheel_sha256": "affa05db9f133a2a4435ea08158223073f965504e1b842267aa9249d1931b2da"
+    },
+    {
+      "path": "aureon/serving/inputs.py",
+      "source_bytes": 9901,
+      "source_sha256": "60762dbd2563c8b68da419e805dade0d73f37602351b20f5d0c7a78ff256ca94",
+      "wheel_bytes": 9901,
+      "wheel_sha256": "60762dbd2563c8b68da419e805dade0d73f37602351b20f5d0c7a78ff256ca94"
+    },
+    {
+      "path": "aureon/serving/metrics.py",
+      "source_bytes": 5670,
+      "source_sha256": "e20f00c4d764f1764282c726fe042056bc6eba460070ea62a03f76b554adee5d",
+      "wheel_bytes": 5670,
+      "wheel_sha256": "e20f00c4d764f1764282c726fe042056bc6eba460070ea62a03f76b554adee5d"
+    },
+    {
+      "path": "aureon/serving/operations.py",
+      "source_bytes": 14294,
+      "source_sha256": "7cf0ea2834c1832f5e9f69c58d25a0b00400a9a0693f88d8151d89b886934a98",
+      "wheel_bytes": 14294,
+      "wheel_sha256": "7cf0ea2834c1832f5e9f69c58d25a0b00400a9a0693f88d8151d89b886934a98"
+    },
+    {
+      "path": "aureon/serving/ownership.py",
+      "source_bytes": 2960,
+      "source_sha256": "a6d43f1b07abdad193535bf263a6993a35efab03d5860221b4f4edcb8ae0a1be",
+      "wheel_bytes": 2960,
+      "wheel_sha256": "a6d43f1b07abdad193535bf263a6993a35efab03d5860221b4f4edcb8ae0a1be"
+    },
+    {
+      "path": "aureon/serving/parser.py",
+      "source_bytes": 4752,
+      "source_sha256": "105e9099c6bb6ba6a44931660c85bfb4b74e6a333994d3abcfe7b1d437486635",
+      "wheel_bytes": 4752,
+      "wheel_sha256": "105e9099c6bb6ba6a44931660c85bfb4b74e6a333994d3abcfe7b1d437486635"
+    },
+    {
+      "path": "aureon/serving/prepared_input.py",
+      "source_bytes": 5582,
+      "source_sha256": "efc6967a52158df36e62c05bb04f050d07b6addd4114b7cfd63b3e82305fc72a",
+      "wheel_bytes": 5582,
+      "wheel_sha256": "efc6967a52158df36e62c05bb04f050d07b6addd4114b7cfd63b3e82305fc72a"
+    },
+    {
+      "path": "aureon/serving/replica_capacity.py",
+      "source_bytes": 5154,
+      "source_sha256": "e70d87867769fba76957608dacc8737e22f8e0d3b6911a4048647454af36cb18",
+      "wheel_bytes": 5154,
+      "wheel_sha256": "e70d87867769fba76957608dacc8737e22f8e0d3b6911a4048647454af36cb18"
+    },
+    {
+      "path": "aureon/serving/replica_control.py",
+      "source_bytes": 32394,
+      "source_sha256": "fd6f583c117c923bead6808a5acb9f0146ba8bd6e63a6df4c8f7bbdb407a04f6",
+      "wheel_bytes": 32394,
+      "wheel_sha256": "fd6f583c117c923bead6808a5acb9f0146ba8bd6e63a6df4c8f7bbdb407a04f6"
+    },
+    {
+      "path": "aureon/serving/replica_operations.py",
+      "source_bytes": 20673,
+      "source_sha256": "6f68169a75d414a6645b40b1848a7ed7aa0dd91d421e72e7f5ad901d2067239d",
+      "wheel_bytes": 20673,
+      "wheel_sha256": "6f68169a75d414a6645b40b1848a7ed7aa0dd91d421e72e7f5ad901d2067239d"
+    },
+    {
+      "path": "aureon/serving/replica_worker.py",
+      "source_bytes": 7992,
+      "source_sha256": "939a52700a0123a0a5d3d29436897f3f355e73ad99eb6e28fe41ef6a731ca3f4",
+      "wheel_bytes": 7992,
+      "wheel_sha256": "939a52700a0123a0a5d3d29436897f3f355e73ad99eb6e28fe41ef6a731ca3f4"
+    },
+    {
+      "path": "aureon/serving/replicas.py",
+      "source_bytes": 7071,
+      "source_sha256": "9fd1a6f79a93a2e1bb39d516fa9ef37ff1bf56670ceede9a7a9366f5a5ddae39",
+      "wheel_bytes": 7071,
+      "wheel_sha256": "9fd1a6f79a93a2e1bb39d516fa9ef37ff1bf56670ceede9a7a9366f5a5ddae39"
+    },
+    {
+      "path": "aureon/serving/security.py",
+      "source_bytes": 10865,
+      "source_sha256": "a37112d68b203f7d89b5287b5dfb46a7c10abf4b6f7ae1106b326dd91d991f3d",
+      "wheel_bytes": 10865,
+      "wheel_sha256": "a37112d68b203f7d89b5287b5dfb46a7c10abf4b6f7ae1106b326dd91d991f3d"
+    },
+    {
+      "path": "aureon/serving/storage.py",
+      "source_bytes": 1252,
+      "source_sha256": "9df7d34e2f4469f1bc121e4dc170b50987b80b6aed91e85dc26777cc692a7ea8",
+      "wheel_bytes": 1252,
+      "wheel_sha256": "9df7d34e2f4469f1bc121e4dc170b50987b80b6aed91e85dc26777cc692a7ea8"
+    },
+    {
+      "path": "aureon/serving/streaming.py",
+      "source_bytes": 6791,
+      "source_sha256": "0e76ea78590476a030e75fd10153f0494c61f73cd060ae7d2fb3bd8ab506e400",
+      "wheel_bytes": 6791,
+      "wheel_sha256": "0e76ea78590476a030e75fd10153f0494c61f73cd060ae7d2fb3bd8ab506e400"
+    },
+    {
+      "path": "aureon/serving/supervisor.py",
+      "source_bytes": 10874,
+      "source_sha256": "a4dcdc49ac53b77c74b00a305a95223516a0eb5a10a90c38e11f76b627d4ea69",
+      "wheel_bytes": 10874,
+      "wheel_sha256": "a4dcdc49ac53b77c74b00a305a95223516a0eb5a10a90c38e11f76b627d4ea69"
+    },
+    {
+      "path": "aureon/serving/timing.py",
+      "source_bytes": 347,
+      "source_sha256": "5014ed1c7356c07b8964bfd6bdfcbc86a050f9998638fc9356c400e720ffa32f",
+      "wheel_bytes": 347,
+      "wheel_sha256": "5014ed1c7356c07b8964bfd6bdfcbc86a050f9998638fc9356c400e720ffa32f"
+    },
+    {
+      "path": "aureon/serving/verified_files.py",
+      "source_bytes": 8068,
+      "source_sha256": "1f01adb43a2daafca44730c04f262472dd8a67a4aaf2935db9ab0eac72946b88",
+      "wheel_bytes": 8068,
+      "wheel_sha256": "1f01adb43a2daafca44730c04f262472dd8a67a4aaf2935db9ab0eac72946b88"
+    },
+    {
+      "path": "aureon/serving/worker.py",
+      "source_bytes": 10949,
+      "source_sha256": "52815c5dbedc49f0e1c82627b8d158df798a7ad372238dcbed47370081c8984a",
+      "wheel_bytes": 10949,
+      "wheel_sha256": "52815c5dbedc49f0e1c82627b8d158df798a7ad372238dcbed47370081c8984a"
+    },
+    {
+      "path": "aureon/serving/workflow_config.py",
+      "source_bytes": 7371,
+      "source_sha256": "b62e416376ed8bf2852cc53d1f62bab7a5d43a7cc4a18566ef0440bd6e4314f6",
+      "wheel_bytes": 7371,
+      "wheel_sha256": "b62e416376ed8bf2852cc53d1f62bab7a5d43a7cc4a18566ef0440bd6e4314f6"
+    },
+    {
+      "path": "aureon/shm_files.py",
+      "source_bytes": 11039,
+      "source_sha256": "669cbbe2d54d7a932ccd7b4d243f1fe87e5ef5a492861dc5329815f99cffd970",
+      "wheel_bytes": 11039,
+      "wheel_sha256": "669cbbe2d54d7a932ccd7b4d243f1fe87e5ef5a492861dc5329815f99cffd970"
+    },
+    {
+      "path": "aureon/shm_transport.py",
+      "source_bytes": 7239,
+      "source_sha256": "ed72b855e5647280c3dbcf85fef10889554f3a9f339e5061d0c173ad4b5f1799",
+      "wheel_bytes": 7239,
+      "wheel_sha256": "ed72b855e5647280c3dbcf85fef10889554f3a9f339e5061d0c173ad4b5f1799"
+    },
+    {
+      "path": "aureon/sources/__init__.py",
+      "source_bytes": 80,
+      "source_sha256": "e623087b33b31e99d997901f15cd5e0ae4e69fc0071f5b4fef689955ed3c723f",
+      "wheel_bytes": 80,
+      "wheel_sha256": "e623087b33b31e99d997901f15cd5e0ae4e69fc0071f5b4fef689955ed3c723f"
+    },
+    {
+      "path": "aureon/sources/http_range.py",
+      "source_bytes": 20862,
+      "source_sha256": "a2b881ac5a18b7fc441af0018b27f7573499aa44ad17d577814788687eccfc61",
+      "wheel_bytes": 20862,
+      "wheel_sha256": "a2b881ac5a18b7fc441af0018b27f7573499aa44ad17d577814788687eccfc61"
+    },
+    {
+      "path": "aureon/sources/stac_raster.py",
+      "source_bytes": 19258,
+      "source_sha256": "e8326a45ec11b734120bd60d76edd379d6976a2fe82ad9400bcc02a89e96ad04",
+      "wheel_bytes": 19258,
+      "wheel_sha256": "e8326a45ec11b734120bd60d76edd379d6976a2fe82ad9400bcc02a89e96ad04"
+    },
+    {
+      "path": "aureon/static/scene-console.css",
+      "source_bytes": 12879,
+      "source_sha256": "7c057dc90900da3d5f6bac56d0cdb76529e745f58d319796b086365f14bd8e37",
+      "wheel_bytes": 12879,
+      "wheel_sha256": "7c057dc90900da3d5f6bac56d0cdb76529e745f58d319796b086365f14bd8e37"
+    },
+    {
+      "path": "aureon/static/scene-console.html",
+      "source_bytes": 8882,
+      "source_sha256": "3e59d279c6e8116201ab105085e6af57e2e76603054993c49af8053e2b640c12",
+      "wheel_bytes": 8882,
+      "wheel_sha256": "3e59d279c6e8116201ab105085e6af57e2e76603054993c49af8053e2b640c12"
+    },
+    {
+      "path": "aureon/static/scene-console.js",
+      "source_bytes": 118897,
+      "source_sha256": "6dd90330cabcef9b0e94dd8e88ef39900dd0c835bb0fc1b75594f702bdde3504",
+      "wheel_bytes": 118897,
+      "wheel_sha256": "6dd90330cabcef9b0e94dd8e88ef39900dd0c835bb0fc1b75594f702bdde3504"
+    },
+    {
+      "path": "aureon/terramind_native/__init__.py",
+      "source_bytes": 368,
+      "source_sha256": "25c48c4d42033d99cc508dbd5fcb980ed8c3f6a9345c472adb5201cae632980b",
+      "wheel_bytes": 368,
+      "wheel_sha256": "25c48c4d42033d99cc508dbd5fcb980ed8c3f6a9345c472adb5201cae632980b"
+    },
+    {
+      "path": "aureon/terramind_native/__main__.py",
+      "source_bytes": 1293,
+      "source_sha256": "09bc1822ae603d12cc72bf37b3d20e2a4fa390b49b7f16d73a7db9d53517040a",
+      "wheel_bytes": 1293,
+      "wheel_sha256": "09bc1822ae603d12cc72bf37b3d20e2a4fa390b49b7f16d73a7db9d53517040a"
+    },
+    {
+      "path": "aureon/terramind_native/_types.py",
+      "source_bytes": 5490,
+      "source_sha256": "f0b47fd77ba06e4a8b36576834e574391b6d7ec2aec63676d18cabde8abed458",
+      "wheel_bytes": 5490,
+      "wheel_sha256": "f0b47fd77ba06e4a8b36576834e574391b6d7ec2aec63676d18cabde8abed458"
+    },
+    {
+      "path": "aureon/terramind_native/common.py",
+      "source_bytes": 3648,
+      "source_sha256": "64e6206248726445c8d1f019a6739cc2bc16adc621b340d938570b5b2e758fc9",
+      "wheel_bytes": 3648,
+      "wheel_sha256": "64e6206248726445c8d1f019a6739cc2bc16adc621b340d938570b5b2e758fc9"
+    },
+    {
+      "path": "aureon/terramind_native/compat.py",
+      "source_bytes": 3561,
+      "source_sha256": "7aef97cd68ec67e6e11dd84c9efb4d467a60a1dc510135b059ada81873dac173",
+      "wheel_bytes": 3561,
+      "wheel_sha256": "7aef97cd68ec67e6e11dd84c9efb4d467a60a1dc510135b059ada81873dac173"
+    },
+    {
+      "path": "aureon/terramind_native/denoiser_batch.py",
+      "source_bytes": 21316,
+      "source_sha256": "4fd6eeec254ad4a6c4fd46859e85099e5a4f69e69b23b5ffce8d440304a4625c",
+      "wheel_bytes": 21316,
+      "wheel_sha256": "4fd6eeec254ad4a6c4fd46859e85099e5a4f69e69b23b5ffce8d440304a4625c"
+    },
+    {
+      "path": "aureon/terramind_native/denoiser_binding.py",
+      "source_bytes": 6871,
+      "source_sha256": "956c7dd03cea547e50d60394619b7832ce28992f5b22e21ed1113653ec959eb5",
+      "wheel_bytes": 6871,
+      "wheel_sha256": "956c7dd03cea547e50d60394619b7832ce28992f5b22e21ed1113653ec959eb5"
+    },
+    {
+      "path": "aureon/terramind_native/denoiser_graph.py",
+      "source_bytes": 5351,
+      "source_sha256": "f2a38399d3c71eb1ed1648c22938443880d1458cb299081893a49437e27eea7b",
+      "wheel_bytes": 5351,
+      "wheel_sha256": "f2a38399d3c71eb1ed1648c22938443880d1458cb299081893a49437e27eea7b"
+    },
+    {
+      "path": "aureon/terramind_native/denoiser_lanes.py",
+      "source_bytes": 23259,
+      "source_sha256": "b36a54601a5ccbde55ee30620ee45310429224466cfd139ec1cac2bfe5cd1cac",
+      "wheel_bytes": 23259,
+      "wheel_sha256": "b36a54601a5ccbde55ee30620ee45310429224466cfd139ec1cac2bfe5cd1cac"
+    },
+    {
+      "path": "aureon/terramind_native/encoder_loader.py",
+      "source_bytes": 12863,
+      "source_sha256": "0e0106db185f38d7e91d6c20f86753bf0acf6c4270a57ad81605c481a42b3821",
+      "wheel_bytes": 12863,
+      "wheel_sha256": "0e0106db185f38d7e91d6c20f86753bf0acf6c4270a57ad81605c481a42b3821"
+    },
+    {
+      "path": "aureon/terramind_native/example_session.py",
+      "source_bytes": 2138,
+      "source_sha256": "3f6cef0b016461dc40c41754c8d7aea5dd20f620aa6b17a5f10a46db2657aa15",
+      "wheel_bytes": 2138,
+      "wheel_sha256": "3f6cef0b016461dc40c41754c8d7aea5dd20f620aa6b17a5f10a46db2657aa15"
+    },
+    {
+      "path": "aureon/terramind_native/execution.py",
+      "source_bytes": 4024,
+      "source_sha256": "91f6e3ed293d88964b598bf377e889b8e7408b5e05a020536c8ecc67b6a9faba",
+      "wheel_bytes": 4024,
+      "wheel_sha256": "91f6e3ed293d88964b598bf377e889b8e7408b5e05a020536c8ecc67b6a9faba"
+    },
+    {
+      "path": "aureon/terramind_native/execution.pyi",
+      "source_bytes": 750,
+      "source_sha256": "979b66793d18b76ba6f6d3f2d69b6cf0722d295f95a0467e18bf12cfdb687b64",
+      "wheel_bytes": 750,
+      "wheel_sha256": "979b66793d18b76ba6f6d3f2d69b6cf0722d295f95a0467e18bf12cfdb687b64"
+    },
+    {
+      "path": "aureon/terramind_native/families.py",
+      "source_bytes": 4567,
+      "source_sha256": "c3e2f8b1ddc5cbdba9754d4d490e8b41025cb910af97534f8723fb8c566257c6",
+      "wheel_bytes": 4567,
+      "wheel_sha256": "c3e2f8b1ddc5cbdba9754d4d490e8b41025cb910af97534f8723fb8c566257c6"
+    },
+    {
+      "path": "aureon/terramind_native/geo.py",
+      "source_bytes": 7690,
+      "source_sha256": "15dbefe61d19a1d95e49a44a8ad4765a46172a0bb662aecfc97152091bcde62e",
+      "wheel_bytes": 7690,
+      "wheel_sha256": "15dbefe61d19a1d95e49a44a8ad4765a46172a0bb662aecfc97152091bcde62e"
+    },
+    {
+      "path": "aureon/terramind_native/graph_runtime.py",
+      "source_bytes": 7179,
+      "source_sha256": "26be4f89ed9c6c5f7ec9a691d8a850d21080ed32dd64eee4b76412799a946dc6",
+      "wheel_bytes": 7179,
+      "wheel_sha256": "26be4f89ed9c6c5f7ec9a691d8a850d21080ed32dd64eee4b76412799a946dc6"
+    },
+    {
+      "path": "aureon/terramind_native/harness.py",
+      "source_bytes": 3972,
+      "source_sha256": "9738b7322ce166529837fa6bdb4018c390e40abe01650caab0f2c8aa6bb8c117",
+      "wheel_bytes": 3972,
+      "wheel_sha256": "9738b7322ce166529837fa6bdb4018c390e40abe01650caab0f2c8aa6bb8c117"
+    },
+    {
+      "path": "aureon/terramind_native/loader.py",
+      "source_bytes": 10059,
+      "source_sha256": "fd2c6aa68c7ef724ded08e9ace4edea1232fad4d8e47542dca11412dbe35dfe7",
+      "wheel_bytes": 10059,
+      "wheel_sha256": "fd2c6aa68c7ef724ded08e9ace4edea1232fad4d8e47542dca11412dbe35dfe7"
+    },
+    {
+      "path": "aureon/terramind_native/memory_output.py",
+      "source_bytes": 2484,
+      "source_sha256": "87fd45ffc1571e7d747d8c53f1fb9d92e26081c4d76ef4b1ec968ae357d7231e",
+      "wheel_bytes": 2484,
+      "wheel_sha256": "87fd45ffc1571e7d747d8c53f1fb9d92e26081c4d76ef4b1ec968ae357d7231e"
+    },
+    {
+      "path": "aureon/terramind_native/memory_output.pyi",
+      "source_bytes": 239,
+      "source_sha256": "867e436b1d75c1a3ac46cb10a7da25c2303e59edf64bd46f674e179cc9ab5f07",
+      "wheel_bytes": 239,
+      "wheel_sha256": "867e436b1d75c1a3ac46cb10a7da25c2303e59edf64bd46f674e179cc9ab5f07"
+    },
+    {
+      "path": "aureon/terramind_native/offline.py",
+      "source_bytes": 5965,
+      "source_sha256": "26dc0b21f826f7b810922d1c8aae95b20e7504607121dd254b414655aeb32d9c",
+      "wheel_bytes": 5965,
+      "wheel_sha256": "26dc0b21f826f7b810922d1c8aae95b20e7504607121dd254b414655aeb32d9c"
+    },
+    {
+      "path": "aureon/terramind_native/reuse.py",
+      "source_bytes": 2713,
+      "source_sha256": "ead6f1669b882eec1bb55afd4fa8fa746d59b0b6ae715973cc6412291496a170",
+      "wheel_bytes": 2713,
+      "wheel_sha256": "ead6f1669b882eec1bb55afd4fa8fa746d59b0b6ae715973cc6412291496a170"
+    },
+    {
+      "path": "aureon/terramind_native/rng.py",
+      "source_bytes": 2505,
+      "source_sha256": "71f750610d06cf6522c27ac537c776c9829ca5568f175a509b2b2407cfec186e",
+      "wheel_bytes": 2505,
+      "wheel_sha256": "71f750610d06cf6522c27ac537c776c9829ca5568f175a509b2b2407cfec186e"
+    },
+    {
+      "path": "aureon/terramind_native/selected_core.py",
+      "source_bytes": 4522,
+      "source_sha256": "568adc2bed4493010767bf63b04bbd88f1586def1d8faae26e2e94a7d7173cab",
+      "wheel_bytes": 4522,
+      "wheel_sha256": "568adc2bed4493010767bf63b04bbd88f1586def1d8faae26e2e94a7d7173cab"
+    },
+    {
+      "path": "aureon/terramind_native/session.py",
+      "source_bytes": 35820,
+      "source_sha256": "5c7261c02a7144bcb548fb23b96ee2c2541f6c00b123e7dfb977da5cdfd99554",
+      "wheel_bytes": 35820,
+      "wheel_sha256": "5c7261c02a7144bcb548fb23b96ee2c2541f6c00b123e7dfb977da5cdfd99554"
+    },
+    {
+      "path": "aureon/terramind_native/session.pyi",
+      "source_bytes": 1806,
+      "source_sha256": "4d458eb4367d84c6b6914a741e292bcc2600dbee6e11d5c8750146bf69b7ba8e",
+      "wheel_bytes": 1806,
+      "wheel_sha256": "4d458eb4367d84c6b6914a741e292bcc2600dbee6e11d5c8750146bf69b7ba8e"
+    },
+    {
+      "path": "aureon/terramind_native/upstream-source.json",
+      "source_bytes": 7864,
+      "source_sha256": "9c216d235b1f36eff56946d7f52b88bee5db1f69c60d6c0504fdb42d78c7d9cc",
+      "wheel_bytes": 7864,
+      "wheel_sha256": "9c216d235b1f36eff56946d7f52b88bee5db1f69c60d6c0504fdb42d78c7d9cc"
+    },
+    {
+      "path": "aureon/value_types.py",
+      "source_bytes": 2547,
+      "source_sha256": "5e1e18e1682dc630c82cc9c94f7bae6e6c47d4151f907fe329e11ab9048f732a",
+      "wheel_bytes": 2547,
+      "wheel_sha256": "5e1e18e1682dc630c82cc9c94f7bae6e6c47d4151f907fe329e11ab9048f732a"
+    }
+  ],
+  "build_inputs": {
+    "pyproject.toml": "2868046e6040d0940c03b0f608868175339afa5ad16dd4be023fc373c1ffdb4d",
+    "packaging/runtime-files.json": "0991a264ae3c44a9d884ce4c89b5487e685a33830d3d4ecbb594450614f3fc46",
+    "packaging/review/SOURCE-NOTICE-OVERLAYS.json": "a1f60117caf2b12cbafd5bda199ad3abd3b95901d64fb49988babada362e5f6f",
+    "packaging/lock-bootstrap-generation.txt": "a28a393e802dbe6bdaccdfa7706afa2938c8dbdaeb9caeaf4c1f3307c3c13f82",
+    "packaging/lock-generation-linux-py312-cu128.txt": "a8ea9adb81933059489a58bd1780a6d25eb5709e80336861087e82cdd42f4402"
+  },
+  "notice_overlay_paths": [
+    "aureon/legacy_reference.py"
+  ],
+  "scope": "Current source matches the selected integrated Best runtime. Original competitor figures belong to the performance origin; this manifest adds no GPU run or performance claim.",
+  "selection_updates": "Intentional runtime/dependency changes require review and an explicit qualification decision; do not regenerate this lock automatically in CI."
+}

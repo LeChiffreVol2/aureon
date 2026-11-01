@@ -3,6 +3,14 @@
 No model construction, downloads, mmap or whole-scene arrays. Maximum scene
 width is explicit; blend RAM scales with width, never height or tile count.
 """
+
+from __future__ import annotations
+from collections.abc import Generator, Callable, Iterator
+from typing import TYPE_CHECKING, Self, cast
+from ..value_types import Pathish, FloatArray, BoolArray, ClassArray, JsonObject, WindowCoordinates
+if TYPE_CHECKING:
+    from rasterio.windows import Window
+
 from contextlib import ExitStack
 from pathlib import Path
 import json
@@ -13,19 +21,19 @@ import numpy as np
 from ..recipe import S2_BANDS, INPUT_UNITS, WINDOW_SIZE, STRIDE, normalize_s2, RecipeCancelled
 from ..catalog import CLASS_NAMES
 from .job import load_manifest, canonical_hash, file_hash, write_json
-from .georaster import _grid, _supporting_files, _verify_supporting_files
+from .georaster import _grid as _grid, _supporting_files, _verify_supporting_files
 
 MAX_SIDE = 4096
 GDAL_CACHE_BYTES = 64*1024**2
 AUDIT_SIDE = 256
 
 
-def check_cancelled(cancelled):
+def check_cancelled(cancelled: Callable[[], bool] | None) -> None:
     if cancelled is not None and cancelled():
         raise RecipeCancelled('Streaming scene cancelled between bounded operations')
 
 
-def anchors(length):
+def anchors(length: int) -> tuple[int, ...]:
     if type(length) is not int or not 1 <= length <= MAX_SIDE:
         raise ValueError('Streaming side must be 1..4096')
     if length <= WINDOW_SIZE: return (0,)
@@ -34,20 +42,20 @@ def anchors(length):
     return result if result[-1]==edge else (*result,edge)
 
 
-def windows(height,width,side=AUDIT_SIDE):
+def windows(height: int,width: int,side: int=AUDIT_SIDE) -> Iterator[WindowCoordinates]:
     for row in range(0,height,side):
         for col in range(0,width,side):
             yield row,col,min(row+side,height),min(col+side,width)
 
 
-def rio_window(window):
+def rio_window(window: WindowCoordinates) -> Window:
     from rasterio.windows import Window
     row,col,bottom,right=window
     return Window(col,row,right-col,bottom-row)
 
 
 class WindowSource:
-    def __init__(self, manifest_path, *, manage_env=True):
+    def __init__(self, manifest_path: Pathish, *, manage_env: bool=True) -> None:
         if type(manage_env) is not bool:
             raise ValueError('manage_env must be an explicit boolean')
         import rasterio as rio
@@ -87,16 +95,16 @@ class WindowSource:
         except BaseException:
             self.stack.close(); raise
 
-    def valid(self,window):
+    def valid(self,window: WindowCoordinates) -> BoolArray:
         w=rio_window(window)
         # Twelve band masks are small bounded windows, not whole-scene masks.
         valid=np.all(self.dataset.read_masks(window=w)>0,axis=0)
         declared=self.mask.read(1,window=w)
         if not np.isin(declared,(0,1)).all(): raise ValueError('Validity values must be 0 or 1')
         valid &= (declared==1) & (self.mask.read_masks(1,window=w)>0)
-        return valid
+        return cast(BoolArray, valid)
 
-    def normalized(self,window,valid=None):
+    def normalized(self,window: WindowCoordinates,valid: BoolArray | None=None) -> FloatArray:
         valid=self.valid(window) if valid is None else valid
         values=self.dataset.read(window=rio_window(window))
         # normalize_s2 validates finite valid pixels; invalid NaN/Inf are ignored.
@@ -105,9 +113,9 @@ class WindowSource:
         tile[:,:normalized.shape[1],:normalized.shape[2]]=normalized
         return tile
 
-    def groups(self,cancelled=None):
+    def groups(self,cancelled: Callable[[], bool] | None=None) -> Generator[tuple[FloatArray, tuple[WindowCoordinates, ...]], None, None]:
         buffer=np.empty((8,12,224,224),dtype=np.float32)
-        selected=[]
+        selected: list[WindowCoordinates] = []
         self.executed=self.skipped=0
         for row in self.rows:
             for col in self.columns:
@@ -123,18 +131,18 @@ class WindowSource:
                     selected=[]
         if selected: yield buffer[:len(selected)],tuple(selected)
 
-    def verify(self):
+    def verify(self) -> None:
         _,_,digest=load_manifest(self.path,max_evidence_bytes=2*1024**3)
         if digest!=self.manifest_hash: raise ValueError('Source manifest changed')
         for key,dataset in [('raster',self.dataset),('valid_mask',self.mask)]:
             _verify_supporting_files(dataset,self.members[key],self.supporting[key])
 
-    def close(self): self.stack.close()
-    def __enter__(self): return self
-    def __exit__(self,*args): self.close()
+    def close(self) -> None: self.stack.close()
+    def __enter__(self) -> Self: return self
+    def __exit__(self,*args: object) -> None: self.close()
 
 
-def profile(source,count=1,dtype='uint8',nodata=None):
+def profile(source: WindowSource,count: int=1,dtype: str='uint8',nodata: int | None=None) -> JsonObject:
     import rasterio
     return dict(driver='GTiff',width=source.width,height=source.height,count=count,dtype=dtype,
         nodata=nodata,crs=source.grid['crs_wkt'],transform=rasterio.Affine(*source.grid['transform']),
@@ -143,7 +151,7 @@ def profile(source,count=1,dtype='uint8',nodata=None):
 
 class CategorySink:
     """Bounded GTiff writes; final publication is a separate COG copy/check."""
-    def __init__(self,folder,source):
+    def __init__(self,folder: Pathish,source: WindowSource) -> None:
         import rasterio
         self.folder=Path(folder); self.folder.mkdir(exist_ok=False)
         self.source=source; self.next_row=0; self.valid_pixels=0
@@ -154,7 +162,7 @@ class CategorySink:
         except BaseException:
             self.stack.close(); raise
 
-    def write(self,window,classes,valid):
+    def write(self,window: WindowCoordinates,classes: ClassArray,valid: BoolArray) -> None:
         expected=(window[2]-window[0],window[3]-window[1])
         if classes.shape!=expected or valid.shape!=expected or classes.dtype!=np.uint8 or valid.dtype!=bool:
             raise ValueError('Exact output window shapes/dtypes required; no implicit decimation')
@@ -163,21 +171,21 @@ class CategorySink:
         self.mask.write(valid.astype(np.uint8),1,window=rio_window(window))
         self.valid_pixels+=int(valid.sum())
 
-    def close(self): self.stack.close()
-    def __enter__(self): return self
-    def __exit__(self,*args): self.close()
+    def close(self) -> None: self.stack.close()
+    def __enter__(self) -> Self: return self
+    def __exit__(self,*args: object) -> None: self.close()
 
 
 class StripeBlend:
     """Only 224 rows resident; additions are in global row-major tile order."""
-    def __init__(self,source,sink,cancelled=None):
+    def __init__(self,source: WindowSource,sink: CategorySink,cancelled: Callable[[], bool] | None=None) -> None:
         self.source,self.sink,self.cancelled=source,sink,cancelled
         self.acc=np.zeros((10,224,source.width),dtype=np.float32)
         self.coverage=np.zeros((224,source.width),dtype=np.uint16)
-        self.top=0; self.previous=None
+        self.top=0; self.previous: tuple[int, int] | None = None
         self.allocated_bytes=self.acc.nbytes+self.coverage.nbytes
 
-    def flush(self,stop):
+    def flush(self,stop: int) -> None:
         while self.top<stop:
             check_cancelled(self.cancelled)
             count=min(224,stop-self.top)
@@ -200,7 +208,7 @@ class StripeBlend:
             self.acc[:,224-count:]=0; self.coverage[224-count:]=0
             self.top+=count
 
-    def add(self,window,logits):
+    def add(self,window: WindowCoordinates,logits: FloatArray) -> None:
         row,col,bottom,right=window
         if self.previous is not None and (row,col)<=self.previous: raise ValueError('Tile order changed')
         if logits.shape!=(10,224,224) or logits.dtype!=np.float32 or not np.isfinite(logits).all():
@@ -211,12 +219,12 @@ class StripeBlend:
         self.coverage[:bottom-row,col:right]+=1
         self.previous=(row,col)
 
-    def finish(self): self.flush(self.source.height)
+    def finish(self) -> None: self.flush(self.source.height)
 
 
 class DiskBlend:
     """Independent reference accumulation: disk raster windows, no rolling code."""
-    def __init__(self,folder,source):
+    def __init__(self,folder: Pathish,source: WindowSource) -> None:
         import rasterio
         self.folder=Path(folder); self.source=source; self.stack=ExitStack()
         try:
@@ -227,7 +235,7 @@ class DiskBlend:
         except BaseException:
             self.stack.close(); raise
 
-    def add(self,window,logits):
+    def add(self,window: WindowCoordinates,logits: FloatArray) -> None:
         row,col,bottom,right=window; w=rio_window(window)
         acc=self.acc.read(window=w); coverage=self.coverage.read(1,window=w)
         with np.errstate(over='ignore',invalid='ignore'): acc+=logits[:,:bottom-row,:right-col]
@@ -235,7 +243,7 @@ class DiskBlend:
         coverage+=1
         self.acc.write(acc,window=w); self.coverage.write(coverage,1,window=w)
 
-    def finish(self,sink,cancelled=None):
+    def finish(self,sink: CategorySink,cancelled: Callable[[], bool] | None=None) -> None:
         for window in windows(self.source.height,self.source.width):
             check_cancelled(cancelled); w=rio_window(window)
             values=self.acc.read(window=w); coverage=self.coverage.read(1,window=w)
@@ -245,12 +253,12 @@ class DiskBlend:
             classes=values.argmax(axis=0).astype(np.uint8); classes[~valid]=255
             sink.write(window,classes,valid)
 
-    def close(self): self.stack.close()
-    def __enter__(self): return self
-    def __exit__(self,*args): self.close()
+    def close(self) -> None: self.stack.close()
+    def __enter__(self) -> Self: return self
+    def __exit__(self,*args: object) -> None: self.close()
 
 
-def deliver(folder,source,categories,reference,provenance,cancelled=None):
+def deliver(folder: Path,source: WindowSource,categories: Path,reference: Path,provenance: JsonObject,cancelled: Callable[[], bool] | None=None) -> JsonObject:
     """Create disk-backed COGs and independently reopen in fixed 256px windows."""
     import rasterio as rio
     from rasterio.shutil import copy as copy_raster

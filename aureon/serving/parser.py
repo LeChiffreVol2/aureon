@@ -1,4 +1,11 @@
 """CPU-only prepared-input decoder in a bounded child process, before model admission."""
+from __future__ import annotations
+import threading
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from .workflow_config import WorkflowBinding
+from ..cloud.contracts import UploadBody
+from .contracts import PathInput
 import argparse
 import json
 import os
@@ -7,13 +14,16 @@ import subprocess
 import sys
 from ..cloud.control import require, encoded, write_file, file_hash
 from ..scene_api.durable import _plain_path
+from .timing import elapsed
 
 LIMITS={'wall_seconds':90,'cpu_seconds':60,'address_space_bytes':4*1024**3,'file_bytes':1024**3,'open_files':64}
 
-def run(body,folder,token,task,*,timeout=None):
+def run(body: UploadBody, folder: PathInput, token: str, task: str, *, timeout: float | None = None, stop: threading.Event | None = None,
+        workflow: WorkflowBinding | None = None) -> Path:
     folder=_plain_path(folder).resolve(strict=True)
     request=folder/('parse-'+token+'.json');receipt=folder/('parse-'+token+'-result.json')
-    write_file(request,encoded({'body':body,'folder':str(folder),'token':token,'task':task,'receipt':str(receipt)}))
+    write_file(request,encoded({'body':body,'folder':str(folder),'token':token,'task':task,'receipt':str(receipt),
+                               **({'workflow':workflow} if workflow is not None else {})}))
     environment_names=('PATH','SystemRoot','WINDIR','TEMP','TMP','TMPDIR','LANG','LC_ALL','TZ')
     env={**{k:os.environ[k] for k in environment_names if k in os.environ},'PYTHONDONTWRITEBYTECODE':'1','PYTHONNOUSERSITE':'1','CUDA_VISIBLE_DEVICES':'',
       'OMP_NUM_THREADS':'1','OPENBLAS_NUM_THREADS':'1','MKL_NUM_THREADS':'1','GDAL_NUM_THREADS':'1',
@@ -25,9 +35,15 @@ def run(body,folder,token,task,*,timeout=None):
     command=[sys.executable,'-I','-B','-c',code,str(Path(__file__).resolve().parents[2]),str(request)]
     child=subprocess.Popen(command,cwd=folder,env=env,stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     try:
-        try:child.wait(timeout=LIMITS['wall_seconds'] if timeout is None else timeout)
-        except subprocess.TimeoutExpired:
-            child.kill();child.wait();raise ValueError('input_parser_deadline') from None
+        deadline=elapsed()+(LIMITS['wall_seconds'] if timeout is None else timeout)
+        while child.poll() is None:
+            if stop is not None and stop.is_set():
+                child.kill();child.wait();raise ValueError('input_parser_stopped')
+            remaining=deadline-elapsed()
+            if remaining<=0:
+                child.kill();child.wait();raise ValueError('input_parser_deadline')
+            try:child.wait(timeout=min(.1,remaining))
+            except subprocess.TimeoutExpired:pass
         require(child.returncode==0 and receipt.is_file(),'input_parser_rejected')
         value=json.loads(receipt.read_bytes())
         require(value.get('passed') and value.get('model_imported') is False,'input_parser_rejected')
@@ -37,7 +53,7 @@ def run(body,folder,token,task,*,timeout=None):
     finally:
         if child.poll() is None:child.kill();child.wait()
 
-def main():
+def main() -> int:
     p=argparse.ArgumentParser();p.add_argument('request',type=Path);args=p.parse_args()
     resource_limits=False
     if sys.platform=='linux':
@@ -51,7 +67,7 @@ def main():
       'network_isolation':'No URL inputs; restricted local formats. OS network namespace/seccomp is a deployment boundary, not provided by rlimits.'}
     try:
         from .inputs import prepare
-        path=prepare(request['body'],folder,request['token'],request['task'])
+        path=prepare(request['body'],folder,request['token'],request['task'],workflow=request.get('workflow'))
         require('torch' not in sys.modules,'parser_model_import')
         result.update(passed=True,manifest=path.relative_to(folder).as_posix(),manifest_sha256=file_hash(path),model_imported=False)
     except Exception:

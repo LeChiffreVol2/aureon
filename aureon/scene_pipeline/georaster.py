@@ -6,6 +6,16 @@ Arrays are limited to the existing recipe's 1024-pixel side bound. A caller's
 band/unit/CRS declarations are recorded, not independently certified.
 """
 
+from __future__ import annotations
+from collections.abc import Sequence
+from types import ModuleType
+from typing import TYPE_CHECKING, cast
+from ..value_types import Array, FloatArray, BoolArray, Pathish, JsonObject, RasterGrid
+from ..recipe import SegmentationResult
+if TYPE_CHECKING:
+    from rasterio.io import DatasetReader
+
+
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
@@ -22,29 +32,29 @@ from ..recipe import INPUT_UNITS, MAX_SIDE, NODATA_CLASS, NUM_CLASSES, S2_BANDS
 
 @dataclass(frozen=True)
 class GeoRasterInput:
-    image: np.ndarray
-    valid_mask: np.ndarray
-    metadata: dict
-    input_identity: dict
+    image: FloatArray
+    valid_mask: BoolArray
+    metadata: RasterGrid
+    input_identity: JsonObject
 
 
-def _rasterio():
+def _rasterio() -> ModuleType:
     try:
         import rasterio
     except ImportError as exc:
         raise RuntimeError("Rasterio is required for geospatial scene input/output.") from exc
-    return rasterio
+    return cast(ModuleType, rasterio)
 
 
-def _canonical(value):
+def _canonical(value: object) -> bytes:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
 
 
-def _json_hash(value):
+def _json_hash(value: object) -> str:
     return hashlib.sha256(_canonical(value)).hexdigest()
 
 
-def _file_hash(path):
+def _file_hash(path: Pathish) -> str:
     digest = hashlib.sha256()
     with Path(path).open("rb") as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
@@ -52,7 +62,7 @@ def _file_hash(path):
     return digest.hexdigest()
 
 
-def _array_identity(array):
+def _array_identity(array: Array) -> JsonObject:
     description = {"shape": list(array.shape), "dtype": array.dtype.str}
     digest = hashlib.sha256(_canonical(description) + b"\0")
     digest.update(memoryview(np.ascontiguousarray(array)).cast("B"))
@@ -60,14 +70,14 @@ def _array_identity(array):
             "hash_format": "json_header_nul_c_order_bytes_v1"}
 
 
-def _local_file(path):
+def _local_file(path: Pathish) -> Path:
     resolved = Path(path).resolve(strict=True)
     if not resolved.is_file():
         raise ValueError("Input must be an existing local raster file.")
     return resolved
 
 
-def _supporting_files(dataset, primary):
+def _supporting_files(dataset: DatasetReader, primary: Path) -> list[JsonObject]:
     """Bind external .msk/.aux files that participate in raster interpretation."""
     paths = sorted({_local_file(path) for path in dataset.files} - {primary})
     if len(paths) > 8 or any(path.parent != primary.parent for path in paths):
@@ -76,12 +86,12 @@ def _supporting_files(dataset, primary):
             for path in paths]
 
 
-def _verify_supporting_files(dataset, primary, expected):
+def _verify_supporting_files(dataset: DatasetReader, primary: Path, expected: list[JsonObject]) -> None:
     if _supporting_files(dataset, primary) != expected:
         raise ValueError("Raster supporting files changed while reading.")
 
 
-def _grid(dataset, expected_crs, rasterio, *, max_side=MAX_SIDE):
+def _grid(dataset: DatasetReader, expected_crs: str, rasterio: ModuleType, *, max_side: int=MAX_SIDE) -> RasterGrid:
     if dataset.driver != "GTiff":
         raise ValueError("Input must be a GeoTIFF, not a virtual or remote dataset.")
     if not (0 < dataset.height <= max_side and 0 < dataset.width <= max_side):
@@ -105,7 +115,7 @@ def _grid(dataset, expected_crs, rasterio, *, max_side=MAX_SIDE):
             "reprojection": "none"}
 
 
-def _radiometry(units, declaration):
+def _radiometry(units: str, declaration: JsonObject | None) -> JsonObject:
     if units == INPUT_UNITS:
         if declaration is not None:
             raise ValueError("Model-domain input must not supply an additional radiometry conversion.")
@@ -139,8 +149,8 @@ def _radiometry(units, declaration):
             "source_declaration_verified": False}
 
 
-def read_s2_geotiff(path, *, bands, units, mask_policy, expected_crs,
-                    radiometry=None, valid_mask_path=None):
+def read_s2_geotiff(path: Pathish, *, bands: Sequence[str], units: str, mask_policy: str, expected_crs: str,
+                    radiometry: JsonObject | None=None, valid_mask_path: Pathish | None=None) -> GeoRasterInput:
     """Read an explicitly aligned twelve-band stack without changing its grid.
 
     ``mask_policy='all_bands_valid'`` intersects all twelve raster band masks.
@@ -245,7 +255,7 @@ def read_s2_geotiff(path, *, bands, units, mask_policy, expected_crs,
     return GeoRasterInput(image, valid, metadata, identity)
 
 
-def _validate_output(path, expected, source, *, nodata, cog, rasterio):
+def _validate_output(path: Path, expected: Array, source: GeoRasterInput, *, nodata: int, cog: bool, rasterio: ModuleType) -> JsonObject:
     with rasterio.open(path, "r") as dataset:
         grid = _grid(dataset, source.metadata["crs"], rasterio)
         if (grid != source.metadata or dataset.count != 1 or dataset.dtypes != ("uint8",)
@@ -261,7 +271,7 @@ def _validate_output(path, expected, source, *, nodata, cog, rasterio):
                 "overviews": dataset.overviews(1)}
 
 
-def write_segmentation_geotiffs(output_dir, result, source, *, provenance, cog=False):
+def write_segmentation_geotiffs(output_dir: Pathish, result: SegmentationResult, source: GeoRasterInput, *, provenance: JsonObject, cog: bool=False) -> JsonObject:
     """Write an exclusive categorical delivery and verify it by reopening.
 
     Creates class_map.tif (classes 0..9; invalid 255), valid_mask.tif (0/1;

@@ -1,9 +1,13 @@
 """Offline local-asset configuration and stdlib-only preflight; no tensor loading."""
+from __future__ import annotations
+from typing import cast
+from ._types import PathInput, Metadata
 import os
 from importlib import metadata
 from pathlib import Path
 
 from .common import INPUT_BANDS, MODEL_SHA, TOKENIZER_SHA, binding, read_json, verify_file, write_json
+from .families import get_terramind_spec, PINNED_S1GRD
 
 ASSETS = {
     "model": {"sha256": MODEL_SHA, "bytes": 1518713958,
@@ -13,16 +17,25 @@ ASSETS = {
 }
 
 
-def _relative(path, parent):
+def generation_assets(model_id: str = "terramind-v1-base") -> dict[str, Metadata]:
+    spec = get_terramind_spec(model_id)
+    if spec.mode != "generation":
+        raise ValueError("Expected a TerraMind generation model_id")
+    return {name: {"sha256": pin.sha256, "bytes": pin.bytes, "revision": pin.revision}
+            for name, pin in (("model", spec.checkpoint), ("tokenizer", PINNED_S1GRD))}
+
+
+def _relative(path: PathInput, parent: Path) -> str:
     # Same-drive relative references keep the generated configuration relocatable
     # together with its local assets. Cross-drive users must colocate first.
     return Path(os.path.relpath(Path(path).resolve(strict=True), parent)).as_posix()
 
 
-def create_config(*, model, tokenizer, input_manifest, output, seed=17, token_steps=8):
+def create_config(*, model: PathInput, tokenizer: PathInput, input_manifest: PathInput | None=None, output: PathInput, seed: int=17, token_steps: int=8, model_id: str="terramind-v1-base") -> Metadata:
     """Bind existing pinned local assets; never download, copy weights or overwrite."""
     from ..api.profiles import PROFILES, require_profile
     from .common import validate_recipe
+    assets = generation_assets(model_id)
     output = Path(output).absolute()
     if output.exists() or output.is_symlink() or not output.parent.is_dir():
         raise ValueError("Config output must be new under an existing directory")
@@ -33,21 +46,28 @@ def create_config(*, model, tokenizer, input_manifest, output, seed=17, token_st
                               "temperature": 1.0, "top_p": 0.8, "top_k": 0, "seed": seed})
     records = {}
     for name, path in (("model", model), ("tokenizer", tokenizer)):
-        record = {**ASSETS[name], "path": _relative(path, output.parent)}
+        record = {**assets[name], "path": _relative(path, output.parent)}
         verify_file(record, output.parent)
         records[name] = record
     source_path = Path(__file__).with_name("upstream-source.json")
-    for name, path in (("source_manifest", source_path), ("input_manifest", input_manifest)):
+    inputs: list[tuple[str, PathInput]] = [("source_manifest", source_path)]
+    if input_manifest is not None:
+        inputs.append(("input_manifest", input_manifest))
+    for name, path in inputs:
         records[name] = {**binding(path), "path": _relative(path, output.parent)}
-    _input_metadata(Path(input_manifest).resolve(strict=True))
-    config = {"schema": "aureon.terramind_native.v1", **records,
+    if input_manifest is not None:
+        _input_metadata(Path(input_manifest).resolve(strict=True))
+    config = {"schema": "aureon.terramind_native.v1" if input_manifest is not None else "aureon.terramind_assets.v1", **records,
               "dependencies": dependencies, "recipe": recipe}
+    # Preserve default base schema bytes and identity. New sizes are explicit.
+    if model_id != "terramind-v1-base":
+        config["model_id"] = model_id
     write_json(output, config)
     return {"schema": "aureon.generation_config_created.v1", "status": "created",
-            "config": binding(output), "model_loaded": False, "downloads": False}
+            "config": binding(output), "model_id": model_id, "model_loaded": False, "downloads": False}
 
 
-def _input_metadata(path):
+def _input_metadata(path: Path) -> Metadata:
     value = read_json(path)
     if (value.get("schema") != "aureon.terramind_native_input.v1"
             or value.get("bands") != INPUT_BANDS
@@ -56,28 +76,33 @@ def _input_metadata(path):
         raise ValueError("Expected prepared all-valid 224x224 S2L2A input contract")
     for name in ("image", "mask"):
         verify_file(value[name], path.parent)
-    return value
+    return cast(Metadata, value)
 
 
-def inspect_config(config):
+def inspect_config(config: PathInput) -> Metadata:
     """Hash assets/source/input and inspect dependency metadata without model imports.
 
     Pixel validity and affine/CRS validation are performed by existing session
     admission before model construction; this check is not numerical qualification.
     """
     from ..api.profiles import require_profile
-    from .loader import verify_config
+    from .loader import verify_config, config_model_id
     environment = require_profile("generation")
     value, paths, recipe = verify_config(config)
+    model_id = config_model_id(value)
+    assets = generation_assets(model_id)
     for name in ("model", "tokenizer"):
-        if any(value[name].get(key) != expected for key, expected in ASSETS[name].items()):
+        if any(value[name].get(key) != expected for key, expected in assets[name].items()):
             raise ValueError("Pinned asset revision/size differs: " + name)
     # Config source inventory must be the reviewed manifest, not any arbitrary
     # list of 37 files satisfying the low-level experiment loader's shape check.
     if read_json(paths["source_manifest"])["files"] != read_json(Path(__file__).with_name("upstream-source.json"))["files"]:
         raise ValueError("Upstream TerraMind source inventory differs from packaged pins")
-    _input_metadata(paths["input_manifest"])
+    if "input_manifest" in paths:
+        _input_metadata(paths["input_manifest"])
     return {"schema": "aureon.generation_preflight.v1", "status": "passed",
+            "model_id": model_id,
             "environment": environment, "config": binding(config), "recipe": recipe,
             "assets_and_upstream_source": "hash_verified", "model_loaded": False,
-            "cuda": "not_probed", "pixel_validity": "checked_by_session_before_loading"}
+            "cuda": "not_probed", "pixel_validity": "checked_by_session_before_loading",
+            "input_binding": "config_manifest" if "input_manifest" in paths else "required_per_request"}

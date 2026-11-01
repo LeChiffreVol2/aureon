@@ -4,6 +4,10 @@ The candidate admits one/eight token steps with ten diffusion steps. Only this
 decoder class, FP32 shapes and asset contract are implemented; broader shapes,
 modalities, diffusion schedules and model identities remain native fallbacks.
 """
+from __future__ import annotations
+from typing import cast
+from ._types import TerraMindModel, Metadata, TensorMap
+from torch import Tensor
 import hashlib
 import importlib
 import math
@@ -14,14 +18,14 @@ MODULE = 'terratorch.models.backbones.terramind.tokenizer.models.unet.unet'
 PROFILE_ID = 'terramind_s1grd224_fp32_graph_v3'
 
 
-def native_frequency_cpu(dim, max_period=10000):
+def native_frequency_cpu(dim: int, max_period: int=10000) -> Tensor:
     # Preserve native CPU exp/arange order, including division AFTER the
     # multiplication. CUDA exp/arange is not substituted for these FP32 bytes.
     half = dim//2
     return torch.exp(-math.log(max_period)*torch.arange(start=0, end=half, dtype=torch.float, device='cpu')/half)
 
 
-def staged_embedding(timesteps, dim, max_period, frequency, signature):
+def staged_embedding(timesteps: Tensor, dim: int, max_period: int, frequency: Tensor, signature: tuple[int, int]) -> Tensor:
     if (dim, max_period, timesteps.device) != (signature[0], signature[1], frequency.device):
         raise ValueError('Timestep embedding signature changed')
     if timesteps.ndim != 1 or timesteps.dtype != torch.int64:
@@ -33,7 +37,7 @@ def staged_embedding(timesteps, dim, max_period, frequency, signature):
     return embedding
 
 
-def eligibility(model, recipe, device):
+def eligibility(model: TerraMindModel, recipe: Metadata, device: str) -> tuple[bool, str]:
     """Admission-only fallback; no forward, CUDA allocation or qualification claim."""
     if device != 'cuda:0':
         return False, 'CUDA profile required'
@@ -54,7 +58,10 @@ def eligibility(model, recipe, device):
 
 
 class S1GRDDecoderBinding:
-    def __init__(self, model):
+    frequency: Tensor | None
+    frequency_version: int | None
+    embedding_namespace: Metadata | None
+    def __init__(self, model: TerraMindModel) -> None:
         self.module = model.tokenizer[TARGET].decoder
         self.original = self.module.forward
         self.signature = (getattr(self.module, 'model_channels', 256), 10000)
@@ -62,14 +69,14 @@ class S1GRDDecoderBinding:
         self.embedding_namespace = None
         self.versions = self._versions()
 
-    def _versions(self):
+    def _versions(self) -> tuple[tuple[str, int, int, int, torch.dtype, torch.device, tuple[int, ...]], ...]:
         # Include registered buffers and storage identity as well as in-place
         # version counters: replacing tensor.data must not reuse a stale graph.
         return tuple((name, id(t), t._version, t.data_ptr(), t.dtype, t.device, tuple(t.shape))
                      for kind, values in (('parameter', self.module.named_parameters()), ('buffer', self.module.named_buffers()))
                      for key, t in values for name in (kind + ':' + key,))
 
-    def validate(self, inputs):
+    def validate(self, inputs: TensorMap) -> None:
         x, t, cond = (inputs[k] for k in ('image', 'timestep', 'conditioning'))
         if (set(inputs) != {'image', 'timestep', 'conditioning'}
                 or self.module.training or torch.is_grad_enabled() or torch.is_autocast_enabled()
@@ -86,7 +93,7 @@ class S1GRDDecoderBinding:
         if self.frequency is not None and self.frequency._version != self.frequency_version:
             raise ValueError('Frequency buffer changed')
 
-    def stage(self, inputs, stats):
+    def stage(self, inputs: TensorMap, stats: Metadata) -> TensorMap:
         device = inputs['image'].device
         buffers = {name: value.to(device=device).clone() for name, value in inputs.items()}
         cpu = native_frequency_cpu(*self.signature)
@@ -96,19 +103,19 @@ class S1GRDDecoderBinding:
         stats['frequency_bytes'] = cpu.numel()*cpu.element_size()
         return buffers
 
-    def forward(self, buffers):
-        return self.original(buffers['image'], buffers['timestep'], buffers['conditioning'], orig_res=None)
+    def forward(self, buffers: TensorMap) -> Tensor:
+        return cast(Tensor, self.original(buffers['image'], buffers['timestep'], buffers['conditioning'], orig_res=None))
 
-    def namespace(self):
+    def namespace(self) -> Metadata:
         if self.embedding_namespace is not None:
             return self.embedding_namespace
         return vars(importlib.import_module(self.module.__class__.__module__))
 
-    def embedding(self, timesteps, dim, max_period=10000):
+    def embedding(self, timesteps: Tensor, dim: int, max_period: int=10000) -> Tensor:
         if self.frequency is None:
             raise RuntimeError('Frequency staging must precede denoiser')
         return staged_embedding(timesteps, dim, max_period, self.frequency, self.signature)
 
-    def close(self):
+    def close(self) -> None:
         self.module = self.original = self.frequency = self.embedding_namespace = None
         self.versions = ()

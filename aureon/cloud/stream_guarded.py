@@ -1,4 +1,12 @@
 """Opt-in single-pass candidate; frozen guarded-v2 and its qualification remain intact."""
+from __future__ import annotations
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, cast
+from .contracts import Qualification, QualificationBinding
+from ..serving.contracts import ArtifactFiles, PathInput
+if TYPE_CHECKING:
+    from ..scene_api.worker import ResidentSceneWorker
+    from ..scene_pipeline.predictor import FullEightEagerTailAdapter
 from contextlib import ExitStack
 import hashlib
 import importlib.metadata as metadata
@@ -21,13 +29,13 @@ from .single_pass_source import SinglePassSource
 GUARDED = 'fp32-stream-guarded-v3'
 
 
-def sources():
+def sources() -> dict[str, str]:
     # Numerical qualification binds the execution module. Control-plane/client
     # edits receive their own tests, without invalidating model qualification.
     return {name:file_hash(Path(__file__).parent/name) for name in ('stream_guarded.py','single_pass_source.py')}
 
 
-def verify_qualification(record):
+def verify_qualification(record: Qualification) -> Qualification:
     if (record.get('schema')!='aureon.guarded_qualification.v2' or record.get('status')!='passed'
             or record.get('profile_id')!=GUARDED or record.get('source_sha256')!=sources()
             or record.get('model_id')!='kao-terramind-b' or len(record.get('cases',[]))!=3
@@ -42,7 +50,7 @@ def verify_qualification(record):
     return record
 
 
-def run_guarded(worker, manifest, identifier, output, *, qualification):
+def run_guarded(worker: ResidentSceneWorker, manifest: PathInput, identifier: str, output: PathInput, *, qualification: Mapping[str, object]) -> ArtifactFiles:
     """One candidate pass and FP32 spatial accumulation, no eager reference pass."""
     started = perf_counter()
     manifest, output = Path(manifest).resolve(), Path(output).resolve()
@@ -77,7 +85,7 @@ def run_guarded(worker, manifest, identifier, output, *, qualification):
                     break
                 stages['read_normalize'] += perf_counter()-tick
                 tick = perf_counter()
-                outputs = _output(worker.candidate(inputs),len(inputs))
+                outputs = _output(cast('FullEightEagerTailAdapter',worker.candidate)(inputs),len(inputs))
                 if resource.getrusage(resource.RUSAGE_SELF).ru_maxrss*1024 >= 3*1024**3:
                     raise ValueError('Guarded process RSS cap exceeded')
                 stages['prediction'] += perf_counter()-tick
@@ -140,7 +148,9 @@ def run_guarded(worker, manifest, identifier, output, *, qualification):
 
 
 class ResidentExecutor:
-    def __init__(self, bundle, work, qualification, *, execute_model=False, qualification_mode=False):
+    worker: ResidentSceneWorker | None
+
+    def __init__(self, bundle: PathInput, work: PathInput, qualification: QualificationBinding, *, execute_model: bool = False, qualification_mode: bool = False) -> None:
         if not execute_model or sys.platform!='linux':
             raise ValueError('Explicit Linux model execution is required')
         self.bundle, self.work = Path(bundle).resolve(), Path(work).resolve()
@@ -154,7 +164,7 @@ class ResidentExecutor:
         self.worker = None
         self.code = sources()
 
-    def execute(self, manifest, job_id, *, qualification=None):
+    def execute(self, manifest: PathInput, job_id: str, *, qualification: Mapping[str, object] | None = None) -> ArtifactFiles:
         if sources()!=self.code:
             raise ValueError('Executor source changed during session')
         if self.worker is None:
@@ -182,10 +192,11 @@ class ResidentExecutor:
             'scope':'Release/profile qualification, not numerical comparison of this job'}
         return run_guarded(self.worker,manifest,job_id,self.work/job_id,qualification=declaration)
 
-    def close(self):
+    def close(self) -> dict[str, object] | None:
         if self.worker is not None:
-            result = self.worker.close()
+            result = cast(dict[str,object],self.worker.close())
             self.worker = None
             if not result['cleanup_passed'] or not result['full_identity_check_passed'] or result['errors']:
                 raise RuntimeError('Resident cleanup failed')
             return result
+        return None

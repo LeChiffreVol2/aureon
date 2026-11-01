@@ -1,4 +1,6 @@
 """Candidate source: accepted window math, one content-bound streaming lifetime."""
+from __future__ import annotations
+from ..serving.contracts import PathInput
 from contextlib import ExitStack
 from pathlib import Path
 from time import perf_counter
@@ -17,7 +19,7 @@ class SinglePassSource(WindowSource):
     Construction mirrors WindowSource's immutable identity/grid contract. Only
     timing boundaries differ. Both pre/post reads still hash actual file bytes.
     """
-    def __init__(self, manifest_path, *, manage_env=True):
+    def __init__(self, manifest_path: PathInput, *, manage_env: bool = True) -> None:
         if type(manage_env) is not bool:
             raise ValueError('manage_env must be an explicit boolean')
         import rasterio as rio
@@ -65,7 +67,7 @@ class SinglePassSource(WindowSource):
             self.stack.close()
             raise
 
-    def verify(self):
+    def verify(self) -> None:
         import rasterio as rio
         tick = perf_counter()
         _,_,digest = load_manifest(self.path,max_evidence_bytes=2*1024**3)

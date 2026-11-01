@@ -85,7 +85,7 @@ class InstalledAlpha(unittest.TestCase):
         self.assertEqual(len(tm), 2)
         for row in b['assets'] + tm:
             self.assertIn('/resolve/' + row['revision'] + '/', row['source_url'])
-        for command, args in [('aureon', ('prepare-vllm', '--help')),
+        for command, args in [('aureon', ('prepare-bundle', '--help')),
                               ('aureon-prepare', ('generation', '--help')),
                               ('aureon-engine', ('generation-config', '--help')),
                               ('aureon-service', ('init', '--help')),

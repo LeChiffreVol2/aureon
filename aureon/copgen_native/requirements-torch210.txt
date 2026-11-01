@@ -1,0 +1,14 @@
+# Explicit Torch2.10 compatibility profile; use with the default TerraMind stack.
+# Python3.12; tested torch module2.10.0+cu128 / CUDA12.8 on Linux/WSL.
+# Direct constraints only; the separate acceptance retains a complete environment lock.
+torch==2.10.0
+torchvision==0.25.0
+numpy==2.2.6
+rasterio==1.5.2
+einops==0.8.2
+ml-collections==1.0.0
+lmdb==1.6.2
+absl-py==2.5.1
+pillow==13.0.0
+tqdm==4.70.1
+PyYAML==6.0.3

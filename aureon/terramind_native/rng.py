@@ -1,4 +1,9 @@
 """Serial request capsule for unchanged upstream global RNG calls."""
+from __future__ import annotations
+from typing import TYPE_CHECKING
+from collections.abc import Iterator
+from ._types import Metadata
+from types import ModuleType
 from contextlib import contextmanager
 import hashlib
 import pickle
@@ -8,31 +13,31 @@ import threading
 _LOCK = threading.Lock()
 
 
-def snapshot(torch, np, devices):
+def snapshot(torch: ModuleType, np: ModuleType, devices: tuple[int, ...]) -> Metadata:
     return {"python": random.getstate(), "numpy": np.random.get_state(),
             "torch": torch.get_rng_state().clone(),
             "cuda": [torch.cuda.get_rng_state(d).clone() for d in devices]}
 
 
-def state_digest(state):
+def state_digest(state: Metadata) -> str:
     h = hashlib.sha256(pickle.dumps((state["python"], state["numpy"]), protocol=4))
     for tensor in [state["torch"], *state["cuda"]]: h.update(tensor.numpy().tobytes())
     return h.hexdigest()
 
 
 @contextmanager
-def rng_capsule(seed, *, devices=()):
+def rng_capsule(seed: int, *, devices: tuple[int, ...]=()) -> Iterator[Metadata]:
     import numpy as np
     import torch
     if type(seed) is not int or not 0 <= seed < 2**63: raise ValueError("Invalid seed")
     if not _LOCK.acquire(blocking=False): raise RuntimeError("Native RNG capsule already in use")
     before = None
-    receipt = {}
+    receipt: Metadata = {}
     try:
         before = snapshot(torch, np, devices)
         receipt["global_before_sha256"] = state_digest(before)
         random.seed(seed); np.random.seed(seed & 0xffffffff)
-        torch.random.default_generator.manual_seed(seed)
+        torch.random.default_generator.manual_seed(seed)  # type: ignore[attr-defined]  # Public PyTorch generator is missing from its re-export stubs.
         for device in devices:
             with torch.cuda.device(device): torch.cuda.manual_seed(seed)
         yield receipt

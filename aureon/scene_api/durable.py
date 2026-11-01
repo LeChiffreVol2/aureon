@@ -5,6 +5,12 @@ synchronous=EXTRA. A process lock fences a second model owner. Payloads are
 fsynced before publication. Interrupted computation is at-least-once; logical
 admission/publication is idempotent within the declared key retention window.
 """
+from __future__ import annotations
+from collections.abc import Callable, Iterable, Iterator
+from typing import Unpack, cast
+from .contracts import (SceneJob, SceneWorker, CompletedReceipt, StatusExtra, Submission,
+                        PublicJob, RetentionPolicy, WindowsFileLock)
+from ..serving.contracts import PathInput
 from collections import deque
 from collections.abc import Mapping
 from copy import deepcopy
@@ -26,7 +32,7 @@ from .api import (APIError, LocalJobService, ARTIFACT_NAMES, _artifact_bytes,
                   _atomic_json, _json_bytes, _snapshot_json, _utc, _JOB_ID)
 
 
-def _plain_path(path):
+def _plain_path(path: PathInput) -> Path:
     """Reject symlinks/junctions in any existing ancestor, including on Windows."""
     path = Path(path).absolute()
     for part in (path, *path.parents):
@@ -37,7 +43,7 @@ def _plain_path(path):
     return path
 
 
-def _sync_dir(path):
+def _sync_dir(path: PathInput) -> None:
     if os.name != 'nt':
         descriptor = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
         try:
@@ -46,7 +52,7 @@ def _sync_dir(path):
             os.close(descriptor)
 
 
-def _sync_tree(folder):
+def _sync_tree(folder: Path) -> None:
     """All evidence, not only public COGs, precedes the completed DB commit."""
     _plain_path(folder)
     for root, dirs, files in os.walk(folder, followlinks=False):
@@ -62,15 +68,16 @@ def _sync_tree(folder):
 
 
 class _FileLock:
-    def __init__(self, path):
+    def __init__(self, path: PathInput) -> None:
         self.stream = _plain_path(path).open('a+b')
         try:
             if os.name == 'nt':
                 import msvcrt
+                windows_lock = cast(WindowsFileLock, msvcrt)
                 if self.stream.tell() == 0:
                     self.stream.write(b'0'); self.stream.flush()
                 self.stream.seek(0)
-                msvcrt.locking(self.stream.fileno(), msvcrt.LK_NBLCK, 1)
+                windows_lock.locking(self.stream.fileno(), windows_lock.LK_NBLCK, 1)
             else:
                 import fcntl
                 fcntl.flock(self.stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -78,38 +85,41 @@ class _FileLock:
             self.stream.close()
             raise ValueError('Durable state is already owned by another process') from None
 
-    def close(self):
+    def close(self) -> None:
         if not self.stream.closed:
             if os.name == 'nt':
                 import msvcrt
+                windows_lock = cast(WindowsFileLock, msvcrt)
                 self.stream.seek(0)
-                msvcrt.locking(self.stream.fileno(), msvcrt.LK_UNLCK, 1)
+                windows_lock.locking(self.stream.fileno(), windows_lock.LK_UNLCK, 1)
             self.stream.close()
 
 
-class _Rows(Mapping):
+class _Rows(Mapping[str, SceneJob]):
     """Read through SQL; completed jobs are never accumulated in Python RAM."""
-    def __init__(self, db):
+    def __init__(self, db: sqlite3.Connection) -> None:
         self.db = db
 
-    def __getitem__(self, identifier):
+    def __getitem__(self, identifier: str) -> SceneJob:
         row = self.db.execute('SELECT body FROM jobs WHERE id=?', (identifier,)).fetchone()
         if row is None:
             raise KeyError(identifier)
-        return json.loads(row[0])
+        # Only this service writes the body after binding the store schema/contract.
+        # This is the persisted-record boundary, not validation of arbitrary JSON.
+        return cast(SceneJob, json.loads(row[0]))
 
-    def __len__(self):
-        return self.db.execute('SELECT count(*) FROM jobs').fetchone()[0]
+    def __len__(self) -> int:
+        return cast(int, self.db.execute('SELECT count(*) FROM jobs').fetchone()[0])
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str]:
         return (row[0] for row in self.db.execute('SELECT id FROM jobs'))
 
 
 class DurableJobService(LocalJobService):
-    def __init__(self, output_dir, worker_factory, scene_ids, *, state_dir, contract,
-                 queue_capacity=2, max_jobs=100000, max_attempts=3,
-                 payload_ttl_seconds=3600, key_ttl_seconds=86400,
-                 min_free_bytes=2 * 2**30):
+    def __init__(self, output_dir: PathInput, worker_factory: Callable[[], SceneWorker], scene_ids: Iterable[str], *, state_dir: PathInput, contract: Mapping[str, object],
+                 queue_capacity: int = 2, max_jobs: int = 100000, max_attempts: int = 3,
+                 payload_ttl_seconds: float = 3600, key_ttl_seconds: float = 86400,
+                 min_free_bytes: int = 2 * 2**30) -> None:
         scenes = tuple(scene_ids) if not isinstance(scene_ids, str) else ()
         if (not callable(worker_factory) or not scenes or len(scenes) > 64
                 or any(not isinstance(s, str) or not 1 <= len(s) <= 256 for s in scenes)
@@ -133,7 +143,7 @@ class DurableJobService(LocalJobService):
             raise ValueError('Fresh lifecycle evidence and managed state must be separate')
         if self.output_dir.exists() or not self.output_dir.parent.is_dir() or not self.state_dir.parent.is_dir():
             raise ValueError('New lifecycle output and existing parents required')
-        self.policy = dict(payload_ttl_seconds=payload_ttl_seconds, key_ttl_seconds=key_ttl_seconds,
+        self.policy: RetentionPolicy = dict(payload_ttl_seconds=payload_ttl_seconds, key_ttl_seconds=key_ttl_seconds,
                            max_attempts=max_attempts, min_free_bytes=min_free_bytes)
         identity = _snapshot_json({'schema': 'aureon.durable_store.v1', 'contract': contract,
             'scenes': list(scenes), 'queue_capacity': queue_capacity, 'max_jobs': max_jobs,
@@ -187,6 +197,7 @@ class DurableJobService(LocalJobService):
             self._stop = False
             self._state, self._error, self._running_id = 'initializing', None, None
             self._init_count, self._next_retention = 0, 0.0
+            self._recovered: list[str]
             self._retired, self._forgotten, self._recovered = 0, 0, []
             pending = self._db.execute("SELECT id FROM jobs WHERE state IN ('queued','running') ORDER BY created,id").fetchall()
             if len(pending) > queue_capacity + 1:
@@ -210,7 +221,7 @@ class DurableJobService(LocalJobService):
             self._file_lock.close()
             raise
 
-    def _service_snapshot(self):
+    def _service_snapshot(self) -> dict[str, object]:
         result = super()._service_snapshot()
         result.update(schema='aureon.durable_scene_service.v1', durability={
             'journal_mode': 'delete', 'synchronous': 'extra', 'sqlite_version': sqlite3.sqlite_version,
@@ -222,45 +233,45 @@ class DurableJobService(LocalJobService):
             'idempotency_scope': 'Until key TTL after terminal completion; expired payload returns HTTP 410'})
         return result
 
-    def _persist_job(self, job):
+    def _persist_job(self, job: SceneJob) -> None:
         finished = datetime.fromisoformat(job['finished_utc']).timestamp() if 'finished_utc' in job else None
         if finished is not None:
             job['payload_expires_utc'] = datetime.fromtimestamp(finished + self.policy['payload_ttl_seconds'], timezone.utc).isoformat()
             job['key_expires_utc'] = datetime.fromtimestamp(finished + self.policy['key_ttl_seconds'], timezone.utc).isoformat()
-        with self._db:
-            self._db.execute('''INSERT INTO jobs(id,key_hash,digest,state,created,finished,body) VALUES(?,?,?,?,?,?,?)
+        with cast(sqlite3.Connection, self._db):
+            cast(sqlite3.Connection, self._db).execute('''INSERT INTO jobs(id,key_hash,digest,state,created,finished,body) VALUES(?,?,?,?,?,?,?)
                 ON CONFLICT(id) DO UPDATE SET state=excluded.state,finished=excluded.finished,body=excluded.body''',
                 (job['job_id'], job['idempotency_key_sha256'], job['request_digest'], job['status'],
                  datetime.fromisoformat(job['created_utc']).timestamp(), finished, _json_bytes(job).decode()))
 
-    def _set_status(self, job, state, **extra):
+    def _set_status(self, job: SceneJob, state: str, **extra: Unpack[StatusExtra]) -> None:
         if state == 'running':
             job['attempts'] += 1
         super()._set_status(job, state, **extra)
 
-    def _cancel_waiting(self, reason):
+    def _cancel_waiting(self, reason: str) -> None:
         # A graceful stop or an unavailable owner preserves admitted durable work.
         # Explicit DELETE /jobs/:id still cancels through the inherited cancel().
         return None
 
-    def _job_folder(self, identifier):
+    def _job_folder(self, identifier: str) -> Path:
         if not _JOB_ID.fullmatch(identifier):
             raise ValueError('Invalid managed job identity')
         with self._lock:
             attempts = self._jobs[identifier]['attempts']
         return _plain_path(self.state_dir / 'jobs' / identifier / f'attempt-{attempts:02d}' / identifier)
 
-    def _run_worker_job(self, worker, job, identifier):
+    def _run_worker_job(self, worker: SceneWorker, job: SceneJob, identifier: str) -> CompletedReceipt:
         folder = self._job_folder(identifier)
         folder.parent.mkdir(parents=True, exist_ok=False)
         return worker.run_job(job['scene_id'], identifier, folder)
 
-    def _completed_result(self, result, identifier):
+    def _completed_result(self, result: CompletedReceipt, identifier: str) -> CompletedReceipt:
         result = super()._completed_result(result, identifier)
         _sync_tree(self._job_folder(identifier))
         return result
 
-    def submit(self, request, idempotency_key):
+    def submit(self, request: object, idempotency_key: object) -> Submission:
         if (not isinstance(request, dict) or set(request) != {'scene_id'}
                 or not isinstance(request['scene_id'], str) or not 1 <= len(request['scene_id']) <= 256):
             raise APIError(400, 'invalid_request', 'Supply exactly one registered scene_id string')
@@ -269,7 +280,7 @@ class DurableJobService(LocalJobService):
         digest = hashlib.sha256(_json_bytes(request)).hexdigest()
         key_hash = hashlib.sha256(idempotency_key.encode('ascii')).hexdigest()
         with self._condition:
-            row = self._db.execute('SELECT id,digest FROM jobs WHERE key_hash=?', (key_hash,)).fetchone()
+            row = cast(sqlite3.Connection, self._db).execute('SELECT id,digest FROM jobs WHERE key_hash=?', (key_hash,)).fetchone()
             if row:
                 if row[1] != digest:
                     raise APIError(409, 'idempotency_conflict', 'This key is bound to a different request')
@@ -301,7 +312,7 @@ class DurableJobService(LocalJobService):
             self._condition.notify_all()
             return {'job': self._public_job(job), 'reused': False}
 
-    def artifact(self, identifier, name):
+    def artifact(self, identifier: str, name: str) -> tuple[bytes, str]:
         # Keep retention excluded until the bounded, hash-checked byte snapshot is
         # in memory. HTTP transmission no longer depends on the file afterwards.
         with self._lock:
@@ -318,7 +329,7 @@ class DurableJobService(LocalJobService):
             except (OSError, ValueError) as error:
                 raise APIError(409, 'artifact_identity_failed', 'Artifact identity validation failed') from error
 
-    def cancel(self, identifier):
+    def cancel(self, identifier: str) -> PublicJob:
         with self._condition:
             if identifier not in self._jobs:
                 raise APIError(404, 'job_not_found', 'Unknown job ID')
@@ -333,7 +344,7 @@ class DurableJobService(LocalJobService):
             self._persist_service()
             return self._public_job(job)
 
-    def _delete_payload(self, identifier):
+    def _delete_payload(self, identifier: str) -> None:
         if not _JOB_ID.fullmatch(identifier):
             raise ValueError('Invalid retention target')
         root = _plain_path(self.state_dir / 'jobs')
@@ -349,32 +360,33 @@ class DurableJobService(LocalJobService):
         # its parent or recording payload_deleted. Finish that durable boundary.
         _sync_dir(root)
 
-    def _maintenance(self):
+    def _maintenance(self) -> None:
         if time.monotonic() < self._next_retention:
             return
         self._next_retention = time.monotonic() + 1
         now = time.time()
-        rows = self._db.execute("SELECT id FROM jobs WHERE state IN ('completed','failed','cancelled') AND finished<=? LIMIT 16",
+        rows = cast(sqlite3.Connection, self._db).execute("SELECT id FROM jobs WHERE state IN ('completed','failed','cancelled') AND finished<=? LIMIT 16",
                                 (now - self.policy['payload_ttl_seconds'],)).fetchall()
         for (identifier,) in rows:
             job = self._jobs[identifier]
-            job = {key: value for key, value in job.items() if key not in ('download_artifacts', 'summary', 'error')}
-            job.update(previous_status=job['status'], status='expired', updated_utc=_utc())
+            # Retention removes optional payload fields only, retaining every required key.
+            job = cast(SceneJob, {key: value for key, value in job.items() if key not in ('download_artifacts', 'summary', 'error')})
+            cast(dict[str, object], job).update(previous_status=job['status'], status='expired', updated_utc=_utc())
             self._persist_job(job)  # Tombstone first; crash during delete is resumable.
             self._retired += 1
-        for (identifier,) in self._db.execute("SELECT id FROM jobs WHERE state='expired' AND payload_deleted=0 LIMIT 16").fetchall():
+        for (identifier,) in cast(sqlite3.Connection, self._db).execute("SELECT id FROM jobs WHERE state='expired' AND payload_deleted=0 LIMIT 16").fetchall():
             self._delete_payload(identifier)
-            with self._db:
-                self._db.execute('UPDATE jobs SET payload_deleted=1 WHERE id=?', (identifier,))
-        with self._db:
-            count = self._db.execute("DELETE FROM jobs WHERE id IN (SELECT id FROM jobs WHERE state='expired' AND payload_deleted=1 AND finished<=? LIMIT 128)",
+            with cast(sqlite3.Connection, self._db):
+                cast(sqlite3.Connection, self._db).execute('UPDATE jobs SET payload_deleted=1 WHERE id=?', (identifier,))
+        with cast(sqlite3.Connection, self._db):
+            count = cast(sqlite3.Connection, self._db).execute("DELETE FROM jobs WHERE id IN (SELECT id FROM jobs WHERE state='expired' AND payload_deleted=1 AND finished<=? LIMIT 128)",
                                      (now - self.policy['key_ttl_seconds'],)).rowcount
         self._forgotten += count
 
-    def close_storage(self):
+    def close_storage(self) -> None:
         """Call after HTTP shutdown, worker join and final lifecycle receipt."""
         if self._thread.is_alive():
             raise ValueError('Cannot release storage ownership while worker is alive')
         with self._lock:
-            self._db.close()
+            cast(sqlite3.Connection, self._db).close()
             self._file_lock.close()

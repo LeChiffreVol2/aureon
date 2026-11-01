@@ -1,0 +1,15 @@
+# Legacy torch260 source-only profile. Never merge with the TerraMind profile.
+# The explicitly selected torch210 profile uses requirements-torch210.txt instead.
+# Install Torch/torchvision from https://download.pytorch.org/whl/cu124 first.
+# Direct dependency profile only; the acceptance stores a complete observed lock.
+torch==2.6.0
+torchvision==0.21.0
+numpy==1.26.4
+einops==0.8.1
+ml-collections==1.0.0
+rasterio==1.4.3
+lmdb==1.6.2
+absl-py==2.1.0
+pillow==11.1.0
+tqdm==4.67.1
+PyYAML==6.0.3

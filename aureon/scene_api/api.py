@@ -4,6 +4,13 @@ The factory, metadata, execution and close methods run only on the owner
 thread. HTTP threads operate on persisted state snapshots and completed files.
 This module imports no model runtime and performs no acquisition or retries.
 """
+from __future__ import annotations
+from collections.abc import Callable, Iterable, Mapping
+import socket
+from typing import Literal, Never, Unpack, cast, overload
+from ..serving.contracts import PathInput
+from .contracts import (ArtifactDeclaration, CompletedReceipt, JobError, PublicJob, SceneJob,
+                        SceneWorker, StatusExtra, ResultExtra, Submission)
 
 from collections import deque
 from copy import deepcopy
@@ -30,27 +37,27 @@ _SHA = re.compile(r"[0-9a-f]{64}\Z")
 
 
 class APIError(ValueError):
-    def __init__(self, status, code, message, *, retry_after=None):
+    def __init__(self, status: int, code: str, message: str, *, retry_after: int | None = None) -> None:
         super().__init__(message)
         self.status, self.code, self.message, self.retry_after = status, code, message, retry_after
 
 
-def _utc():
+def _utc() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _json_bytes(value):
+def _json_bytes(value: object) -> bytes:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
 
 
-def _snapshot_json(value, maximum=128 * 1024):
+def _snapshot_json(value: Mapping[str, object], maximum: int = 128 * 1024) -> dict[str, object]:
     raw = _json_bytes(value)
     if len(raw) > maximum:
         raise ValueError("Worker metadata/receipt exceeds its bounded JSON size")
-    return json.loads(raw)
+    return cast(dict[str, object], json.loads(raw))
 
 
-def _atomic_json(path, value):
+def _atomic_json(path: Path, value: object) -> None:
     temporary = path.with_name(path.name + "." + uuid.uuid4().hex + ".tmp")
     try:
         with temporary.open("xb") as stream:
@@ -63,7 +70,7 @@ def _atomic_json(path, value):
             temporary.unlink()
 
 
-def _artifact_path(folder, relative):
+def _artifact_path(folder: Path, relative: object) -> Path:
     if (not isinstance(relative, str) or not relative or "\\" in relative
             or PurePosixPath(relative).is_absolute() or PureWindowsPath(relative).drive
             or any(part in (".", "..") for part in relative.split("/"))):
@@ -78,7 +85,7 @@ def _artifact_path(folder, relative):
     return path
 
 
-def _artifact_bytes(folder, declaration):
+def _artifact_bytes(folder: Path, declaration: ArtifactDeclaration) -> bytes:
     if (not isinstance(declaration, dict) or set(declaration) != {"path", "sha256", "bytes"}
             or not isinstance(declaration["sha256"], str) or not _SHA.fullmatch(declaration["sha256"])
             or type(declaration["bytes"]) is not int or not 0 <= declaration["bytes"] <= MAX_ARTIFACT):
@@ -95,6 +102,14 @@ def _artifact_bytes(folder, declaration):
 
 
 class LocalJobService:
+    _worker_metadata: dict[str, object]
+    _worker_shutdown: dict[str, object] | None
+    _error: JobError | None
+    _running_id: str | None
+    _queue: deque[str]
+    _jobs: Mapping[str, SceneJob]
+    _keys: dict[str, str]
+
     """One lifetime-bounded job registry and one FIFO/model owner.
 
     ``output_dir`` must be new; jobs are not silently resumed after restart.
@@ -103,7 +118,7 @@ class LocalJobService:
     capacity counts waiting work, in addition to at most one running job.
     """
 
-    def __init__(self, output_dir, worker_factory, scene_ids, queue_capacity=2, max_jobs=32):
+    def __init__(self, output_dir: PathInput, worker_factory: Callable[[], SceneWorker], scene_ids: Iterable[str], queue_capacity: int = 2, max_jobs: int = 32) -> None:
         if not callable(worker_factory):
             raise ValueError("worker_factory must be callable")
         if (type(queue_capacity) is not int or not 1 <= queue_capacity <= 32
@@ -134,7 +149,7 @@ class LocalJobService:
         self._thread = threading.Thread(target=self._owner, name="aureon-scene-owner", daemon=False)
         self._thread.start()
 
-    def _service_snapshot(self):
+    def _service_snapshot(self) -> dict[str, object]:
         return {"schema": "aureon.local_scene_service.v1", "state": self._state,
                 "scene_ids": list(self.scene_ids), "queue_capacity": self.queue_capacity,
                 "queued_jobs": len(self._queue), "running_job_id": self._running_id,
@@ -144,25 +159,26 @@ class LocalJobService:
                 "admission_open": self._state == "ready" and not self._stop,
                 "error": deepcopy(self._error)}
 
-    def _persist_service(self):
+    def _persist_service(self) -> None:
         _atomic_json(self.output_dir / "service.json", self._service_snapshot())
 
-    def _public_job(self, job):
+    def _public_job(self, job: SceneJob) -> PublicJob:
         result = {key: deepcopy(value) for key, value in job.items()
                   if key not in ("request_digest", "idempotency_key_sha256", "download_artifacts")}
         result["artifacts"] = {name: {"url": f"/v1/jobs/{job['job_id']}/artifacts/{name}",
                                       "sha256": item["sha256"], "bytes": item["bytes"]}
                                for name, item in job.get("download_artifacts", {}).items()}
-        return result
+        # Projection retains job_id and constructs every public artifact field.
+        return cast(PublicJob, result)
 
-    def _persist_job(self, job):
+    def _persist_job(self, job: SceneJob) -> None:
         _atomic_json(self.output_dir / "status" / (job["job_id"] + ".json"), job)
 
-    def snapshot(self):
+    def snapshot(self) -> dict[str, object]:
         with self._lock:
             return self._service_snapshot()
 
-    def wait_ready(self, timeout=30):
+    def wait_ready(self, timeout: float = 30) -> bool:
         deadline = time.monotonic() + timeout
         with self._condition:
             while self._state == "initializing":
@@ -172,7 +188,7 @@ class LocalJobService:
                 self._condition.wait(remaining)
             return self._state == "ready" and not self._stop
 
-    def submit(self, request, idempotency_key):
+    def submit(self, request: object, idempotency_key: object) -> Submission:
         if (not isinstance(request, dict) or set(request) != {"scene_id"}
                 or not isinstance(request["scene_id"], str) or not 1 <= len(request["scene_id"]) <= 256):
             raise APIError(400, "invalid_request", "Supply exactly one registered scene_id string")
@@ -201,7 +217,7 @@ class LocalJobService:
                    "updated_utc": now, "request_digest": request_digest,
                    "idempotency_key_sha256": key_hash}
             self._persist_job(job)
-            self._jobs[identifier], self._keys[key_hash] = job, identifier
+            cast(dict[str, SceneJob], self._jobs)[identifier], self._keys[key_hash] = job, identifier
             self._queue.append(identifier)
             try:
                 self._persist_service()
@@ -220,13 +236,13 @@ class LocalJobService:
             self._condition.notify_all()
             return {"job": self._public_job(job), "reused": False}
 
-    def get_job(self, identifier):
+    def get_job(self, identifier: str) -> PublicJob:
         with self._lock:
             if identifier not in self._jobs:
                 raise APIError(404, "job_not_found", "Unknown job ID")
             return self._public_job(self._jobs[identifier])
 
-    def cancel(self, identifier):
+    def cancel(self, identifier: str) -> PublicJob:
         with self._condition:
             if identifier not in self._jobs:
                 raise APIError(404, "job_not_found", "Unknown job ID")
@@ -240,7 +256,7 @@ class LocalJobService:
             self._persist_service()
             return self._public_job(job)
 
-    def artifact(self, identifier, name):
+    def artifact(self, identifier: str, name: str) -> tuple[bytes, str]:
         with self._lock:
             if identifier not in self._jobs or name not in ARTIFACT_NAMES:
                 raise APIError(404, "artifact_not_found", "Unknown job or artifact")
@@ -254,25 +270,27 @@ class LocalJobService:
             raise APIError(409, "artifact_identity_failed", "Completed artifact identity validation failed") from error
         return data, declaration["sha256"]
 
-    def _set_status(self, job, state, **extra):
-        job.update(status=state, updated_utc=_utc(), **extra)
+    def _set_status(self, job: SceneJob, state: str, **extra: Unpack[StatusExtra]) -> None:
+        # mypy 1.11 cannot express TypedDict.update keyword arguments; StatusExtra
+        # constrains the update and each fixed key has its declared value type.
+        cast(dict[str, object], job).update(status=state, updated_utc=_utc(), **extra)
         if state == "running":
             job["started_utc"] = job["updated_utc"]
         elif state in ("completed", "failed", "cancelled"):
             job["finished_utc"] = job["updated_utc"]
         self._persist_job(job)
 
-    def _cancel_waiting(self, reason):
+    def _cancel_waiting(self, reason: str) -> None:
         while self._queue:
             self._set_status(self._jobs[self._queue.popleft()], "cancelled", reason=reason)
 
-    def _worker_snapshot(self, worker):
+    def _worker_snapshot(self, worker: SceneWorker) -> dict[str, object]:
         value = worker.metadata()
         if not isinstance(value, dict):
             raise ValueError("Worker metadata must be a dictionary")
         return _snapshot_json(value, 64 * 1024)
 
-    def _completed_result(self, result, identifier):
+    def _completed_result(self, result: CompletedReceipt, identifier: str) -> CompletedReceipt:
         if not isinstance(result, dict) or result.get("status") != "completed":
             raise ValueError("Worker must return an explicitly completed receipt")
         if result.get("job_id", identifier) != identifier:
@@ -282,18 +300,19 @@ class LocalJobService:
             raise ValueError("Completed worker receipt must expose the exact four allowlisted artifacts")
         for declaration in files.values():
             _artifact_bytes(self._job_folder(identifier), declaration)
-        return _snapshot_json(result)
+        # The completed status and exact artifact declarations were checked above.
+        return cast(CompletedReceipt, _snapshot_json(result))
 
-    def _job_folder(self, identifier):
+    def _job_folder(self, identifier: str) -> Path:
         return self.output_dir / "jobs" / identifier
 
-    def _run_worker_job(self, worker, job, identifier):
+    def _run_worker_job(self, worker: SceneWorker, job: SceneJob, identifier: str) -> CompletedReceipt:
         return worker.run_job(job["scene_id"], identifier, self._job_folder(identifier))
 
-    def _maintenance(self):
+    def _maintenance(self) -> None:
         """Owner-only housekeeping hook; legacy evidence is never retired."""
 
-    def _owner(self):
+    def _owner(self) -> None:
         worker = None
         try:
             self._init_count += 1
@@ -319,7 +338,8 @@ class LocalJobService:
                     self._running_id = identifier
                     self._set_status(job, "running")
                     self._persist_service()
-                error, result = None, None
+                error: JobError | None = None
+                result: CompletedReceipt | None = None
                 try:
                     result = self._run_worker_job(worker, job, identifier)
                     result = self._completed_result(result, identifier)
@@ -337,7 +357,10 @@ class LocalJobService:
                 with self._condition:
                     self._worker_metadata = metadata
                     if error is None:
-                        extra = {key: result[key] for key in ("summary", "worker_id") if key in result}
+                        # Both calls completed successfully on this branch; only exceptions set error.
+                        result = cast(CompletedReceipt, result)
+                        result_view: Mapping[str, object] = result
+                        extra = cast(ResultExtra, {key: result_view[key] for key in ("summary", "worker_id") if key in result})
                         self._set_status(job, "completed", download_artifacts=result["download_artifacts"], **extra)
                     else:
                         self._set_status(job, "failed", error=error)
@@ -361,7 +384,7 @@ class LocalJobService:
                     pass
                 self._condition.notify_all()
         finally:
-            close_error = None
+            close_error: JobError | None = None
             if worker is not None:
                 try:
                     closed = worker.close()
@@ -388,7 +411,7 @@ class LocalJobService:
                     pass
                 self._condition.notify_all()
 
-    def shutdown(self, *, timeout=None):
+    def shutdown(self, *, timeout: float | None = None) -> bool:
         """Seal admission, cancel queued jobs, let running work finish, then close."""
         with self._condition:
             self._stop = True
@@ -403,20 +426,20 @@ class LocalJobService:
         return not self._thread.is_alive()
 
 
-def _strict_json(raw):
-    def pairs(items):
+def _strict_json(raw: bytes) -> object:
+    def pairs(items: list[tuple[str, object]]) -> dict[str, object]:
         result = {}
         for key, value in items:
             if key in result:
                 raise ValueError("Duplicate JSON key")
             result[key] = value
         return result
-    def constant(unused):
+    def constant(unused: str) -> Never:
         raise ValueError("Nonfinite JSON value")
     return json.loads(raw.decode("utf-8"), object_pairs_hook=pairs, parse_constant=constant)
 
 
-def _range(value, size):
+def _range(value: str | None, size: int) -> tuple[int, int, bool]:
     if value is None:
         return 0, size - 1, False
     match = re.fullmatch(r"bytes=([0-9]{0,20})-([0-9]{0,20})", value)
@@ -435,11 +458,19 @@ def _range(value, size):
 
 
 class _BoundedServer(ThreadingHTTPServer):
+    service: LocalJobService
+    bearer_token: str
+    console_assets: ConsoleAssets | None
+    connection_slots: threading.BoundedSemaphore
+    allowed_hosts: set[str]
+
     # server_close joins admitted HTTP handlers before durable storage closes.
     daemon_threads = False
     request_queue_size = 8
 
-    def process_request(self, request, client_address):
+    def process_request(self, request: socket.socket | tuple[bytes, socket.socket], client_address: tuple[str, int]) -> None:
+        # HTTPServer inherits TCPServer: its get_request supplies a socket.
+        request = cast(socket.socket, request)
         if not self.connection_slots.acquire(blocking=False):
             try:
                 request.settimeout(1)
@@ -454,7 +485,7 @@ class _BoundedServer(ThreadingHTTPServer):
             self.connection_slots.release()
             raise
 
-    def process_request_thread(self, request, client_address):
+    def process_request_thread(self, request: socket.socket | tuple[bytes, socket.socket], client_address: tuple[str, int]) -> None:
         try:
             super().process_request_thread(request, client_address)
         finally:
@@ -462,22 +493,24 @@ class _BoundedServer(ThreadingHTTPServer):
 
 
 class _Handler(BaseHTTPRequestHandler):
+    server: _BoundedServer
+
     protocol_version = "HTTP/1.1"
     server_version = "AUREON-Local-Scene"
 
-    def setup(self):
+    def setup(self) -> None:
         super().setup()
         self.connection.settimeout(5)
 
-    def log_message(self, unused_format, *unused_args):
+    def log_message(self, unused_format: str, *unused_args: object) -> None:
         # Tokens and user request paths never enter an implicit access log.
         pass
 
-    def handle_expect_100(self):
+    def handle_expect_100(self) -> bool:
         self._error(APIError(417, "unsupported_expectation", "Expect is unsupported for small JSON jobs"))
         return False
 
-    def _reply(self, status, body, content_type="application/json", extra=None):
+    def _reply(self, status: int, body: bytes, content_type: str = "application/json", extra: Mapping[str, str] | None = None) -> None:
         self.close_connection = True
         self.send_response(status)
         self.send_header("Content-Length", str(len(body)))
@@ -491,10 +524,10 @@ class _Handler(BaseHTTPRequestHandler):
         if body:
             self.wfile.write(body)
 
-    def _json(self, status, value, extra=None):
+    def _json(self, status: int, value: object, extra: Mapping[str, str] | None = None) -> None:
         self._reply(status, _json_bytes(value), extra=extra)
 
-    def _error(self, error, extra=None):
+    def _error(self, error: APIError, extra: Mapping[str, str] | None = None) -> None:
         headers = dict(extra or {})
         if error.retry_after is not None:
             headers["Retry-After"] = str(error.retry_after)
@@ -502,13 +535,17 @@ class _Handler(BaseHTTPRequestHandler):
             headers["WWW-Authenticate"] = 'Bearer realm="AUREON local scene API"'
         self._json(error.status, {"error": {"code": error.code, "message": error.message}}, headers)
 
-    def _single(self, name, *, required=False):
+    @overload
+    def _single(self, name: str, *, required: Literal[True]) -> str: ...
+    @overload
+    def _single(self, name: str, *, required: Literal[False] = False) -> str | None: ...
+    def _single(self, name: str, *, required: bool = False) -> str | None:
         values = self.headers.get_all(name, [])
         if len(values) > 1 or (required and len(values) != 1):
             raise APIError(400, "invalid_headers", f"Supply exactly one {name} header")
         return values[0] if values else None
 
-    def _preflight(self, *, public_get=False):
+    def _preflight(self, *, public_get: bool = False) -> None:
         host = self._single("Host", required=True)
         if host not in self.server.allowed_hosts:
             raise APIError(403, "invalid_host", "Host must identify this loopback listener")
@@ -523,7 +560,7 @@ class _Handler(BaseHTTPRequestHandler):
             if len(authorization) > 512 or not hmac.compare_digest(authorization.encode(), expected.encode()):
                 raise APIError(401, "unauthorized", "A valid bearer token is required")
 
-    def _dispatch(self, method):
+    def _dispatch(self, method: str) -> None:
         try:
             asset = self.server.console_assets.get(self.path) if self.server.console_assets is not None else None
             self._preflight(public_get=method == "GET" and (self.path == "/healthz" or asset is not None))
@@ -586,17 +623,17 @@ class _Handler(BaseHTTPRequestHandler):
         except Exception:
             self._error(APIError(500, "internal_error", "Local API request failed"))
 
-    def do_GET(self):
+    def do_GET(self) -> None:
         self._dispatch("GET")
 
-    def do_POST(self):
+    def do_POST(self) -> None:
         self._dispatch("POST")
 
-    def do_DELETE(self):
+    def do_DELETE(self) -> None:
         self._dispatch("DELETE")
 
 
-def create_server(service, token, port=0, *, console_assets=None):
+def create_server(service: LocalJobService, token: str, port: int = 0, *, console_assets: ConsoleAssets | None = None) -> _BoundedServer:
     """Create an authenticated IPv4 loopback listener; caller starts/stops it."""
     if not isinstance(service, LocalJobService):
         raise ValueError("Supply the explicit LocalJobService")

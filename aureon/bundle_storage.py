@@ -4,6 +4,9 @@ Reflink when the filesystem supports isolated copy-on-write bytes, otherwise
 copy. Never use writable hardlinks. Retirement is limited to one verified
 closed worker's recoverable weight file; all original evidence is retained.
 """
+from __future__ import annotations
+from .value_types import JsonObject, Pathish
+
 import errno
 import hashlib
 import json
@@ -19,7 +22,7 @@ from time import perf_counter
 MEMBERS = ('config.json', 'pytorch_model.bin', 'bundle_receipt.json')
 
 
-def _hash(path):
+def _hash(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open('rb') as stream:
         for block in iter(lambda: stream.read(1024 * 1024), b''):
@@ -27,7 +30,7 @@ def _hash(path):
     return digest.hexdigest()
 
 
-def _regular(path):
+def _regular(path: Pathish) -> tuple[int, int, int, int, int]:
     # Walk from an absolute, not pre-resolved path so parent links are rejected.
     path = Path(path).absolute()
     for entry in (path, *path.parents):
@@ -40,7 +43,7 @@ def _regular(path):
     return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
 
 
-def _write(path, value):
+def _write(path: Path, value: JsonObject) -> None:
     with path.open('x', encoding='utf-8') as stream:
         json.dump(value, stream, indent=2, allow_nan=False)
         stream.write('\n')
@@ -48,7 +51,7 @@ def _write(path, value):
         os.fsync(stream.fileno())
 
 
-def _read(path):
+def _read(path: Path) -> JsonObject:
     _regular(path)
     with path.open('rb') as stream:
         raw = stream.read(4 * 1024 * 1024 + 1)
@@ -60,7 +63,7 @@ def _read(path):
     return value
 
 
-def _private_copy(source, target):
+def _private_copy(source: Path, target: Path) -> str:
     """Fresh target only; FICLONE failure falls back to bounded byte copying."""
     with source.open('rb') as src, target.open('xb') as dst:
         if sys.platform == 'linux':
@@ -79,7 +82,7 @@ def _private_copy(source, target):
     return 'copy'
 
 
-def snapshot_bundle(source, destination, *, model_id=None):
+def snapshot_bundle(source: Pathish, destination: Pathish, *, model_id: str | None=None) -> tuple[JsonObject, JsonObject]:
     """Return (verified bundle, storage receipt); caller owns worker lifecycle."""
     from .runtime import verify_bundle
     source, destination = Path(source).absolute(), Path(destination).absolute()
@@ -115,7 +118,7 @@ def snapshot_bundle(source, destination, *, model_id=None):
             'policy': 'Private files; retire only after successful shutdown and canonical re-verification'}
 
 
-def retire_bundle_copy(worker_folder, canonical_bundle):
+def retire_bundle_copy(worker_folder: Pathish, canonical_bundle: Pathish) -> JsonObject:
     """Retire exactly bundle/pytorch_model.bin after persisted successful close.
 
 Call after all model handles are closed. Exceptions preserve the weight file
@@ -174,7 +177,7 @@ No directory scanning, recursive deletion, retention timer or raw-data GC.
     return result
 
 
-def finish_bundle_storage(worker_folder, canonical_bundle, shutdown):
+def finish_bundle_storage(worker_folder: Pathish, canonical_bundle: Pathish, shutdown: JsonObject) -> JsonObject:
     """Post-shutdown cleanup; retain failed-worker bytes and explicit diagnostics."""
     folder = Path(worker_folder)
     if (shutdown.get('full_identity_check_passed') is not True
@@ -192,7 +195,7 @@ def finish_bundle_storage(worker_folder, canonical_bundle, shutdown):
     return result
 
 
-def verify_retirement(worker_folder, canonical_bundle):
+def verify_retirement(worker_folder: Pathish, canonical_bundle: Pathish) -> JsonObject:
     """Read-only check for an experiment whose worker already retired its copy."""
     from .runtime import verify_bundle
     folder, canonical = Path(worker_folder).absolute(), Path(canonical_bundle).absolute()

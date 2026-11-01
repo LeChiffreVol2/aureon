@@ -1,4 +1,10 @@
 """Manually start one local KAO-TerraMind B resident worker; no acquisition."""
+from __future__ import annotations
+from collections.abc import Callable, Sequence
+from typing import TYPE_CHECKING, cast
+from .contracts import SceneWorker
+if TYPE_CHECKING:
+    from .durable import DurableJobService
 import argparse
 import hashlib
 from datetime import datetime, timezone
@@ -15,13 +21,13 @@ from .api import LocalJobService, create_server
 from .console import load_console_assets
 
 
-def _write(path, value):
+def _write(path: Path, value: object) -> None:
     with path.open('x', encoding='utf-8') as stream:
         json.dump(value, stream, indent=2, sort_keys=True, allow_nan=False)
         stream.write('\n')
 
 
-def main(argv=None):
+def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--execute-model', action='store_true')
     parser.add_argument('--bundle', type=Path, required=True)
@@ -86,7 +92,7 @@ def main(argv=None):
                 mounts.append((len(mount.parts), right.split()[0]))
         if not mounts or max(mounts)[1] not in ('ext4', 'xfs', 'btrfs'):
             parser.error('Durable state requires a local ext4/xfs/btrfs filesystem (WSL Linux disk, not /mnt/c)')
-        digest = lambda path: hashlib.sha256(path.read_bytes()).hexdigest()
+        digest: Callable[[Path], str] = lambda path: hashlib.sha256(path.read_bytes()).hexdigest()
         contract = {'bundle_receipt_sha256': digest(bundle/'bundle_receipt.json'),
             'manifests_sha256': {name: digest(path) for name, path in scenes.items()},
             'source_sha256': source_hashes(), 'precision': 'highest FP32; TF32 off',
@@ -99,7 +105,7 @@ def main(argv=None):
             min_free_bytes=args.min_free_bytes)
     # Importing this module never constructs a worker. Only the owner factory
     # below loads the model, after the explicit execution check above.
-    def factory():
+    def factory() -> SceneWorker:
         from .worker import ResidentSceneWorker
         return ResidentSceneWorker(bundle, scenes, output/'worker', execute_model=True,
                                    hourly_rate=args.hourly_rate, currency=args.currency,
@@ -110,6 +116,7 @@ def main(argv=None):
     previous = {}
     for signum in (signal.SIGINT, signal.SIGTERM):
         previous[signum] = signal.signal(signum, lambda *_: stop.set())
+    service: LocalJobService | None
     service = server = None
     exit_code, reason = 0, 'manual_stop'
     try:
@@ -183,7 +190,8 @@ def main(argv=None):
             print(json.dumps({'status':'closed', 'exit_code':exit_code,
                               'receipt':str(output/'server-exit.json')}), flush=True)
             if durable_args:
-                service.close_storage()
+                # The same durable_args branch constructs DurableJobService above.
+                cast('DurableJobService', service).close_storage()
         for signum, handler in previous.items():
             signal.signal(signum, handler)
     return exit_code

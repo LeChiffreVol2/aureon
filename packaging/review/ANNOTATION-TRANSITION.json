@@ -1,0 +1,24 @@
+{
+  "schema": "aureon.annotation_source_transition.v1",
+  "version": "0.1.0",
+  "method": "packaging/source_identity.py executable_digest; preserves control flow, calls, constants, metadata and dataclass fields/defaults",
+  "scope": "Annotation-only candidate source transition; original qualification hashes and GPU evidence remain separate",
+  "new_gpu_qualification": false,
+  "files": {
+    "aureon/catalog.py": {
+      "original_sha256": "5e82eff095948ba83b6ea40145bac84ece30e788e80bcdd01c9f2a9394908708",
+      "candidate_sha256": "0f6345a19516d71d87896b45ed014d7092e9c537326136ee27e8a4f35f34fee9",
+      "executable_ast_sha256": "d4414bbfb7779d6fe59852dc536defb924e622641fda6651acbdaf6f28d2adbc"
+    },
+    "aureon/recipe.py": {
+      "original_sha256": "f1e9ac9e5eb4b15c6548509ccf4a6ed80e2ffa0213653b21beed58361fd27e1d",
+      "candidate_sha256": "fec51eb192077357bdc05d2684d38cd0f7202664dde94d08128f298fdca7afb9",
+      "executable_ast_sha256": "9799f429a11989a340963ce34e1a02777f8060647ac9e461542a706657ff3f00"
+    },
+    "aureon/vllm_bundle.py": {
+      "original_sha256": "4b7d799f35ef1ce3d19c69bc61d9ccc0cae1023c0b688af1fb06f1592c07dd28",
+      "candidate_sha256": "e4cf409308d44b28362af47ff87f737849ed8b6a77d10b3d6840b7aad9fb0e77",
+      "executable_ast_sha256": "73d27fa4ea667177f498f7a11201b0fd16064462f858589cf093c1fd1956cafe"
+    }
+  }
+}

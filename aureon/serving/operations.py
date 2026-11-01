@@ -1,4 +1,9 @@
 """Offline state backup/restore and explicit owned retention; never starts a model."""
+from __future__ import annotations
+from typing import TYPE_CHECKING
+from .contracts import PathInput
+if TYPE_CHECKING:
+    from .control import Control
 import json
 import os
 from pathlib import Path
@@ -12,13 +17,13 @@ from .ownership import exclusive,inventory,safe_child
 
 SKIP={'control.sqlite','control.sqlite-wal','control.sqlite-shm','service.lock','worker.lock','supervisor.lock'}
 
-def copy_file(source,target):
+def copy_file(source: PathInput, target: PathInput) -> None:
     source=_plain_path(source);target=_plain_path(target);target.parent.mkdir(parents=True,exist_ok=True,mode=0o700)
     with source.open('rb') as incoming,target.open('xb') as output:
         os.chmod(target,0o600);shutil.copyfileobj(incoming,output,1024**2);output.flush();os.fsync(output.fileno())
     _sync_dir(target.parent)
 
-def verify_database_files(root,db):
+def verify_database_files(root: Path, db: sqlite3.Connection) -> None:
     require(db.execute('PRAGMA integrity_check').fetchone()[0]=='ok','backup_database_integrity',409)
     for row in db.execute('SELECT manifest,declaration FROM inputs WHERE state="ready"'):
         require(row[0] and safe_child(root,row[0]).is_file(),'backup_input_missing',409)
@@ -31,7 +36,7 @@ def verify_database_files(root,db):
             p=safe_child(root,item['path'])
             require(p.is_relative_to(root/'results'/row[0]) and p.stat().st_size==item['bytes'] and file_hash(p)==item['sha256'],'backup_artifact_integrity',409)
 
-def backup(root,destination,credentials):
+def backup(root: PathInput, destination: PathInput, credentials: PathInput) -> dict[str, object]:
     from .control import Control
     root=_plain_path(root).resolve(strict=True);destination=_plain_path(destination)
     require(not destination.exists() and destination.parent.is_dir() and not destination.is_relative_to(root),'fresh_external_backup_required')
@@ -69,7 +74,7 @@ def backup(root,destination,credentials):
               'bytes':sum(r['bytes'] for r in files),'contains_secrets':True,'resume_required':True}
         finally:control.close()
 
-def restore(source,destination,expected_sha256):
+def restore(source: PathInput, destination: PathInput, expected_sha256: str) -> dict[str, object]:
     from .control import Control
     source=_plain_path(source).resolve(strict=True);destination=_plain_path(destination)
     require(not destination.exists() and destination.parent.is_dir() and not destination.is_relative_to(source),'fresh_restore_required')
@@ -114,7 +119,7 @@ def restore(source,destination,expected_sha256):
         # Partial staging is retained for diagnosis; never publish it as restored state.
         raise
 
-def expire(control):
+def expire(control: Control) -> list[dict[str, str]]:
     """Commit inaccessible tombstones first; deletion is replayable after failures."""
     with control.tx() as db:
         now=control.clock()
@@ -141,7 +146,7 @@ def expire(control):
         removed.append({'kind':kind,'id':identifier})
     return removed
 
-def reclaim(control,folder):
+def reclaim(control: Control, folder: PathInput) -> dict[str, object]:
     folder=_plain_path(folder).resolve()
     with exclusive(control.root):
         with control.lock:row=control.db.execute('SELECT * FROM service_scratch WHERE path=?',(str(folder),)).fetchone()

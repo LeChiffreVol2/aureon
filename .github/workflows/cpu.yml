@@ -16,7 +16,128 @@ jobs:
           persist-credentials: false
       - name: Static source and public documentation (no network)
         run: python3.12 -I -B tools/check_public_source.py --report "$RUNNER_TEMP/aureon-static-result.json"
+      - name: Locked Best runtime and dependency identity (no model imports)
+        run: |
+          python3.12 -I -B tools/check_selected_engine.py --report "$RUNNER_TEMP/aureon-selected-identity.json"
+          python3.12 -I -B tools/test_selected_engine.py
+      - name: Reusable-library boundary (no private tools or model calls)
+        run: python3.12 -I -B packaging/check_library_scope.py --output "$RUNNER_TEMP/library-scope.json"
+      - name: Engine layers and compatibility imports
+        run: python3.12 -I -B packaging/check_architecture.py --output "$RUNNER_TEMP/architecture.json"
       - name: Standard-library contracts (no models or package installation)
         run: |
           python3.12 -B packaging/ci_cpu.py --output "$RUNNER_TEMP/aureon-cpu-result.json"
           cat "$RUNNER_TEMP/aureon-cpu-result.json"
+      - name: Bounded stages and replica protocol (loopback and separate CPU processes)
+        run: python3.12 -I -B -S packaging/ci_scaling.py --runtime . --scratch "$RUNNER_TEMP/source-scaling" --output "$RUNNER_TEMP/source-scaling.json"
+      - name: Linux service process contracts (fake workers, no model runtime)
+        run: python3.12 -I -B packaging/ci_extended.py service --scratch "$RUNNER_TEMP/aureon-service-new" --output "$RUNNER_TEMP/aureon-service-result.json"
+  typed-installed:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        torch: ["2.10.0", "2.11.0"]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Isolated CPU validation tools
+        run: |
+          python3.12 -m venv "$RUNNER_TEMP/aureon-check"
+          python3.12 -m venv "$RUNNER_TEMP/aureon-build"
+          "$RUNNER_TEMP/aureon-build/bin/python" -m pip install --disable-pip-version-check "setuptools==84.2.1"
+          "$RUNNER_TEMP/aureon-check/bin/python" -m pip install --disable-pip-version-check "mypy==1.11.2" "numpy==2.2.6" "rasterio==1.5.2"
+          "$RUNNER_TEMP/aureon-check/bin/python" -m pip install --disable-pip-version-check --index-url https://download.pytorch.org/whl/cpu "torch==${{ matrix.torch }}"
+          # Read pinned factory source in compatibility tests; never import TerraTorch or load weights.
+          "$RUNNER_TEMP/aureon-check/bin/python" -m pip install --disable-pip-version-check --no-deps "terratorch==1.2.13"
+      - name: Source types and NumPy contracts
+        run: |
+          "$RUNNER_TEMP/aureon-check/bin/python" -I -B packaging/check_types.py --scratch "$RUNNER_TEMP/source-types" --output "$RUNNER_TEMP/source-types.json"
+          "$RUNNER_TEMP/aureon-check/bin/python" -I -B packaging/check_implementation.py --scratch "$RUNNER_TEMP/source-implementation" --output "$RUNNER_TEMP/source-implementation.json"
+          "$RUNNER_TEMP/aureon-check/bin/python" -I -B packaging/ci_extended.py numpy --scratch "$RUNNER_TEMP/source-numpy" --output "$RUNNER_TEMP/source-numpy.json"
+          "$RUNNER_TEMP/aureon-check/bin/python" -I -B packaging/ci_extended.py tensor --scratch "$RUNNER_TEMP/source-tensor" --output "$RUNNER_TEMP/source-tensor.json"
+      - name: Resource policies and contributor adapter conformance (CPU only)
+        run: '"$RUNNER_TEMP/aureon-check/bin/python" -I -B packaging/ci_scalability.py --scratch "$RUNNER_TEMP/source-scalability" --output "$RUNNER_TEMP/source-scalability.json"'
+      - name: Core profile dependency resolution in existing CPU environment
+        run: |
+          case "${{ matrix.torch }}" in
+            2.10.0) extra=borrowed-torch210 ;;
+            2.11.0) extra=borrowed-torch211 ;;
+            *) exit 1 ;;
+          esac
+          "$RUNNER_TEMP/aureon-check/bin/python" -B -m pip install --dry-run --disable-pip-version-check --report "$RUNNER_TEMP/core-resolver.json" ".[${extra}]" --config-settings aureon-profile=core
+      - name: EO route and offline STAC contracts (NumPy and Rasterio only)
+        run: '"$RUNNER_TEMP/aureon-check/bin/python" -I -B packaging/ci_eo.py --scratch "$RUNNER_TEMP/source-eo" --output "$RUNNER_TEMP/source-eo.json"'
+      - name: Rasterio and bounded HTTP source contracts (loopback only)
+        run: '"$RUNNER_TEMP/aureon-check/bin/python" -I -B packaging/ci_sources.py --scratch "$RUNNER_TEMP/source-windows" --output "$RUNNER_TEMP/source-windows.json"'
+      - name: Experimental COP-GEN CPU contracts (fake runtime, no assets)
+        run: '"$RUNNER_TEMP/aureon-check/bin/python" -I -B packaging/ci_copgen.py --scratch "$RUNNER_TEMP/source-copgen" --output "$RUNNER_TEMP/source-copgen.json"'
+      - name: Build and install a wheel offline without project dependencies
+        run: |
+          "$RUNNER_TEMP/aureon-build/bin/python" -I -B packaging/build_review.py --output "$RUNNER_TEMP/candidate"
+          "$RUNNER_TEMP/aureon-check/bin/python" -m pip install --no-index --no-deps --no-compile --target "$RUNNER_TEMP/installed" "$RUNNER_TEMP/candidate/dist/aureon_inference-0.1.0-py3-none-any.whl"
+          mkdir "$RUNNER_TEMP/extracted"
+          tar -xzf "$RUNNER_TEMP/candidate/dist/aureon_inference-0.1.0.tar.gz" -C "$RUNNER_TEMP/extracted"
+      - name: Installed imports, types and CPU contracts from matching sdist
+        run: |
+          cd "$RUNNER_TEMP"
+          source="$RUNNER_TEMP/extracted/aureon_inference-0.1.0"
+          python="$RUNNER_TEMP/aureon-check/bin/python"
+          "$python" -I -B "$source/packaging/check_installed.py" --source "$source" --runtime "$RUNNER_TEMP/installed" --scratch "$RUNNER_TEMP/installed-imports" --output "$RUNNER_TEMP/installed-imports.json"
+          "$python" -I -B "$source/packaging/check_types.py" --source "$source" --runtime "$RUNNER_TEMP/installed" --scratch "$RUNNER_TEMP/installed-types" --output "$RUNNER_TEMP/installed-types.json"
+          "$python" -I -B "$source/packaging/check_implementation.py" --source "$source" --runtime "$RUNNER_TEMP/installed" --scratch "$RUNNER_TEMP/installed-implementation" --output "$RUNNER_TEMP/installed-implementation.json"
+          "$python" -I -B "$source/packaging/ci_extended.py" numpy --source "$source" --runtime "$RUNNER_TEMP/installed" --scratch "$RUNNER_TEMP/installed-numpy" --output "$RUNNER_TEMP/installed-numpy.json"
+          "$python" -I -B "$source/packaging/ci_extended.py" tensor --source "$source" --runtime "$RUNNER_TEMP/installed" --scratch "$RUNNER_TEMP/installed-tensor" --output "$RUNNER_TEMP/installed-tensor.json"
+          "$python" -I -B "$source/packaging/ci_extended.py" service --source "$source" --runtime "$RUNNER_TEMP/installed" --scratch "$RUNNER_TEMP/installed-service" --output "$RUNNER_TEMP/installed-service.json"
+
+          "$python" -I -B -S "$source/packaging/ci_scaling.py" --runtime "$RUNNER_TEMP/installed" --scratch "$RUNNER_TEMP/installed-scaling" --output "$RUNNER_TEMP/installed-scaling.json"
+          "$python" -I -B "$source/packaging/ci_scalability.py" --runtime "$RUNNER_TEMP/installed" --scratch "$RUNNER_TEMP/installed-scalability" --output "$RUNNER_TEMP/installed-scalability.json"
+          "$python" -I -B "$source/packaging/ci_eo.py" --source "$source" --runtime "$RUNNER_TEMP/installed" --scratch "$RUNNER_TEMP/installed-eo" --output "$RUNNER_TEMP/installed-eo.json"
+          "$python" -I -B "$source/packaging/ci_sources.py" --runtime "$RUNNER_TEMP/installed" --scratch "$RUNNER_TEMP/installed-windows" --output "$RUNNER_TEMP/installed-windows.json"
+          "$python" -I -B "$source/packaging/ci_copgen.py" --runtime "$RUNNER_TEMP/installed" --scratch "$RUNNER_TEMP/installed-copgen" --output "$RUNNER_TEMP/installed-copgen.json"
+      - name: Build and install explicit core profile with normal dependency resolution
+        run: |
+          "$RUNNER_TEMP/aureon-build/bin/python" -I -B packaging/build_review.py --profile core --output "$RUNNER_TEMP/core-candidate"
+          "$RUNNER_TEMP/aureon-check/bin/python" -m pip install --no-index --no-compile --target "$RUNNER_TEMP/core-installed" "$RUNNER_TEMP/core-candidate/dist/aureon_inference-0.1.0-py3-none-any.whl"
+          mkdir "$RUNNER_TEMP/core-extracted"
+          tar -xzf "$RUNNER_TEMP/core-candidate/dist/aureon_inference-0.1.0.tar.gz" -C "$RUNNER_TEMP/core-extracted"
+          source="$RUNNER_TEMP/core-extracted/aureon_inference-0.1.0"
+          "$RUNNER_TEMP/aureon-check/bin/python" -I -B "$source/packaging/ci_scalability.py" --runtime "$RUNNER_TEMP/core-installed" --scratch "$RUNNER_TEMP/core-scalability" --output "$RUNNER_TEMP/core-scalability.json"
+          python3.12 -I -B -S "$source/packaging/ci_scaling.py" --runtime "$RUNNER_TEMP/core-installed" --scratch "$RUNNER_TEMP/core-scaling" --output "$RUNNER_TEMP/core-scaling.json"
+  upstream-cpu:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      CUDA_VISIBLE_DEVICES: ""
+      LIGHTLY_DID_VERSION_CHECK: "True"
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      NO_ALBUMENTATIONS_UPDATE: "1"
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Existing generation profile with full upstream dependencies
+        run: |
+          python3.12 -m venv "$RUNNER_TEMP/upstream"
+          python="$RUNNER_TEMP/upstream/bin/python"
+          "$python" -m pip install --disable-pip-version-check --require-hashes -r packaging/lock-bootstrap-generation.txt
+          "$python" -m pip install --disable-pip-version-check --require-hashes --no-build-isolation --no-cache-dir -r packaging/lock-generation-linux-py312-cu128.txt
+          "$python" -m pip check
+      - name: Actual upstream CPU source contracts (network and CUDA init blocked)
+        run: '"$RUNNER_TEMP/upstream/bin/python" -I -B packaging/ci_terratorch.py --scratch "$RUNNER_TEMP/upstream-source" --output "$RUNNER_TEMP/upstream-source.json"'
+      - name: Build matching wheel and sdist, then install offline
+        run: |
+          python3.12 -m venv "$RUNNER_TEMP/upstream-build"
+          "$RUNNER_TEMP/upstream-build/bin/python" -m pip install --disable-pip-version-check "setuptools==84.2.1"
+          python="$RUNNER_TEMP/upstream/bin/python"
+          "$RUNNER_TEMP/upstream-build/bin/python" -I -B packaging/build_review.py --output "$RUNNER_TEMP/upstream-candidate"
+          "$python" -m pip install --no-index --no-deps --no-compile --target "$RUNNER_TEMP/upstream-installed" "$RUNNER_TEMP/upstream-candidate/dist/aureon_inference-0.1.0-py3-none-any.whl"
+          mkdir "$RUNNER_TEMP/upstream-extracted"
+          tar -xzf "$RUNNER_TEMP/upstream-candidate/dist/aureon_inference-0.1.0.tar.gz" -C "$RUNNER_TEMP/upstream-extracted"
+      - name: Actual installed upstream contracts from matching sdist
+        run: |
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/upstream/bin/python" -I -B "$RUNNER_TEMP/upstream-extracted/aureon_inference-0.1.0/packaging/ci_terratorch.py" --runtime "$RUNNER_TEMP/upstream-installed" --scratch "$RUNNER_TEMP/upstream-installed-tests" --output "$RUNNER_TEMP/upstream-installed-tests.json"

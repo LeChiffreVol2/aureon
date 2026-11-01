@@ -6,6 +6,10 @@ No multiprocessing resource tracker is involved and files are never resized
 after creation. Unlinking a poisoned client leaves existing server mappings
 valid until the server drains and closes its original file descriptors.
 """
+from __future__ import annotations
+from typing import Any, Self, cast
+from .value_types import FloatArray, JsonObject
+
 import json
 import mmap
 import os
@@ -26,22 +30,22 @@ SCHEMA = 'aureon.shm_pooling.v1'
 TOKEN = re.compile(r'[0-9a-f]{32}\Z')
 
 
-def require_linux():
+def require_linux() -> None:
     if sys.platform != 'linux':
         raise RuntimeError('AUREON shared-memory transport requires Linux; choose binary_pack explicitly elsewhere')
 
 
-def slot_name(client, kind):
+def slot_name(client: str, kind: str) -> str:
     if not isinstance(client, str) or not TOKEN.fullmatch(client) or kind not in ('input', 'output'):
         raise ValueError('Invalid shared-memory slot identity')
     return f'aureon-shm-v1-{client}-{kind}'
 
 
-def slot_bytes(kind, capacity):
+def slot_bytes(kind: str, capacity: int) -> int:
     return capacity * (12 if kind == 'input' else 10) * 224 * 224 * 4
 
 
-def _unique_object(pairs):
+def _unique_object(pairs: list[tuple[str, Any]]) -> JsonObject:
     value = {}
     for key, item in pairs:
         if key in value:
@@ -50,7 +54,7 @@ def _unique_object(pairs):
     return value
 
 
-def decode_descriptor(body):
+def decode_descriptor(body: bytes) -> JsonObject:
     if not isinstance(body, bytes) or not 0 < len(body) <= MAX_CONTROL_BYTES:
         raise ValueError('Shared-memory control body must be between 1 and 2048 bytes')
     value = json.loads(body, object_pairs_hook=_unique_object)
@@ -78,7 +82,7 @@ def decode_descriptor(body):
     return value
 
 
-def decode_completion(body, expected):
+def decode_completion(body: bytes, expected: JsonObject) -> JsonObject:
     if not isinstance(body, bytes) or not 0 < len(body) <= MAX_CONTROL_BYTES:
         raise ValueError('Invalid shared-memory completion size')
     value = json.loads(body, object_pairs_hook=_unique_object)
@@ -88,7 +92,7 @@ def decode_completion(body, expected):
     return value
 
 
-def _check_stat(info, expected_bytes, *, expected=None):
+def _check_stat(info: os.stat_result, expected_bytes: int, *, expected: JsonObject | None=None) -> None:
     if (not stat.S_ISREG(info.st_mode) or stat.S_IMODE(info.st_mode) != 0o600
             or info.st_uid != os.getuid() or info.st_nlink != 1 or info.st_size != expected_bytes):
         raise ValueError('Shared-memory slots require private 0600 regular files owned by this UID, one link and exact bytes')
@@ -98,8 +102,15 @@ def _check_stat(info, expected_bytes, *, expected=None):
 
 class SharedSlots:
     """Own descriptors/mappings; never retain exported NumPy buffer views."""
+    directory: int | None
+    capacity: int | None
+    client: str | None
+    fds: dict[str, int]
+    maps: dict[str, mmap.mmap]
+    identities: dict[str, JsonObject]
+    created: set[str]
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.directory = None
         self.fds, self.maps, self.identities = {}, {}, {}
         self.created = set()
@@ -108,7 +119,7 @@ class SharedSlots:
         self.closed = False
 
     @classmethod
-    def create(cls, capacity):
+    def create(cls, capacity: int) -> Self:
         require_linux()
         if type(capacity) is not int or not 1 <= capacity <= MAX_TILES:
             raise ValueError('Shared-memory capacity must be an integer from 1 to 8')
@@ -136,7 +147,7 @@ class SharedSlots:
             raise
 
     @classmethod
-    def attach(cls, descriptor):
+    def attach(cls, descriptor: JsonObject) -> Self:
         require_linux()
         import fcntl
 
@@ -163,33 +174,33 @@ class SharedSlots:
             self.close()
             raise
 
-    def _array(self, kind):
+    def _array(self, kind: str) -> FloatArray:
         if self.closed:
             raise RuntimeError('Shared-memory slots are closed')
         shape = INPUT_SHAPE if kind == 'input' else OUTPUT_SHAPE
-        return np.ndarray((self.capacity, *shape), dtype='<f4', buffer=self.maps[kind])
+        return np.ndarray((cast(int, self.capacity), *shape), dtype='<f4', buffer=self.maps[kind])
 
-    def write(self, kind, values):
+    def write(self, kind: str, values: FloatArray) -> None:
         view = self._array(kind)
         try:
             np.copyto(view[:len(values)], values, casting='no')
         finally:
             del view
 
-    def snapshot(self, kind, count):
+    def snapshot(self, kind: str, count: int) -> FloatArray:
         view = self._array(kind)
         try:
             return view[:count].copy(order='C')
         finally:
             del view
 
-    def descriptor(self, model, count, request):
+    def descriptor(self, model: str, count: int, request: str) -> JsonObject:
         value = {'schema': SCHEMA, 'client': self.client, 'request': request, 'model': model,
                  'count': count, 'capacity': self.capacity, 'dtype': '<f4',
                  'slots': {kind: dict(item) for kind, item in self.identities.items()}}
         return decode_descriptor(json.dumps(value, separators=(',', ':')).encode())
 
-    def close(self, *, unlink=False):
+    def close(self, *, unlink: bool=False) -> None:
         if self.closed:
             return
         for mapping in self.maps.values():
@@ -202,7 +213,7 @@ class SharedSlots:
                 # allocation before the normal metadata assignment.
                 if item is None and kind in self.fds:
                     info = os.fstat(self.fds[kind])
-                    item = {'name': slot_name(self.client, kind), 'device': info.st_dev, 'inode': info.st_ino}
+                    item = {'name': slot_name(cast(str, self.client), kind), 'device': info.st_dev, 'inode': info.st_ino}
                 if item is not None:
                     try:
                         info = os.stat(item['name'], dir_fd=self.directory, follow_symlinks=False)

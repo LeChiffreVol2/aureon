@@ -1,9 +1,12 @@
 """Prepare local Sentinel-2 GeoTIFFs or check a prepared scene without a GPU."""
+
+from __future__ import annotations
+from collections.abc import Sequence
 import argparse
 import json
 
 
-def main(argv=None):
+def main(argv: Sequence[str] | None=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     prepare = commands.add_parser("scene", help="Prepare an explicit aligned or L2A local JSON spec")

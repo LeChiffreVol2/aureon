@@ -1,4 +1,9 @@
 """Opt-in Linux-local shared-memory pooling client; no model or server startup."""
+from __future__ import annotations
+from typing import Self
+from types import TracebackType
+from .value_types import FloatArray, JsonObject
+
 import http.client
 import json
 import math
@@ -21,6 +26,9 @@ class SharedMemoryPoolingPredictor:
     server maps stay valid until native cancellation/completion has drained.
     Callers must explicitly construct a new client after a failure.
     """
+    _slots: SharedSlots | None
+    _connection: http.client.HTTPConnection | None
+    _failure: BaseException | None
     transport = 'shared_memory'
     dtype = 'float32'
     max_in_flight = 1
@@ -30,7 +38,7 @@ class SharedMemoryPoolingPredictor:
     json_backend = 'stdlib_control_only'
     base64_backend = 'not_used'
 
-    def __init__(self, model_name, *, base_url='http://127.0.0.1:8000', capacity=8, timeout=120):
+    def __init__(self, model_name: str, *, base_url: str='http://127.0.0.1:8000', capacity: int=8, timeout: float=120) -> None:
         require_linux()
         url = urlsplit(base_url)
         if (url.scheme != 'http' or url.hostname != '127.0.0.1' or url.username or url.password
@@ -49,7 +57,7 @@ class SharedMemoryPoolingPredictor:
         self._closed = False
         self.completed_calls = self.completed_tiles = 0
 
-    def __call__(self, values):
+    def __call__(self, values: FloatArray) -> FloatArray:
         if (not isinstance(values, np.ndarray) or values.dtype != np.dtype('<f4') or values.ndim != 4
                 or values.shape[1:] != INPUT_SHAPE or not 1 <= len(values) <= self.capacity):
             raise ValueError('Expected little-endian float32 [N,12,224,224] within capacity')
@@ -96,7 +104,7 @@ class SharedMemoryPoolingPredictor:
                     self._connection = None
                 raise
 
-    def metadata(self):
+    def metadata(self) -> JsonObject:
         with self._lock:
             return {'schema': 'aureon.shm_client.v1', 'transport': self.transport, 'model_id': self.model_name,
                 'capacity': self.capacity, 'state': 'closed' if self._closed else 'poisoned' if self._failure else 'ready',
@@ -107,7 +115,7 @@ class SharedMemoryPoolingPredictor:
                 'copies': 'owned client input snapshot -> mmap; owned server snapshot -> native packed engine; CPU logits -> mmap -> independent client output',
                 'failure': str(self._failure) if self._failure is not None else None}
 
-    def close(self):
+    def close(self) -> None:
         with self._lock:
             if self._closed:
                 return
@@ -118,10 +126,10 @@ class SharedMemoryPoolingPredictor:
                 self._slots.close(unlink=True)
             self._closed = True
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         if self._closed:
             raise RuntimeError('Shared-memory predictor is closed')
         return self
 
-    def __exit__(self, exc_type, exc, traceback):
+    def __exit__(self, exc_type: type[BaseException] | None, exc: BaseException | None, traceback: TracebackType | None) -> None:
         self.close()

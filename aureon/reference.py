@@ -4,6 +4,13 @@ Importing this module does not import a neural runtime or construct a model.
 Construction is explicit, accepts only a verified local candidate bundle, and
 loads its complete state strictly without requesting pretrained weights.
 """
+
+from __future__ import annotations
+from typing import TYPE_CHECKING, BinaryIO, cast
+from .value_types import Array, FloatArray, Pathish
+
+if TYPE_CHECKING:
+    from torch.nn import Module
 from collections.abc import Mapping
 from copy import deepcopy
 import hashlib
@@ -19,7 +26,7 @@ _INPUT_SHAPE = (12, 224, 224)
 _OUTPUT_SHAPE = (10, 224, 224)
 
 
-def _stream_hash(stream):
+def _stream_hash(stream: BinaryIO) -> str:
     stream.seek(0)
     digest = hashlib.sha256()
     for chunk in iter(lambda: stream.read(1024 * 1024), b''):
@@ -43,7 +50,7 @@ class PyTorchPredictor:
     execution_backend = 'pytorch_reference'
     validate_on_cpu = False
 
-    def __init__(self, bundle_dir, *, device='cuda', dtype='float32', validate_on_cpu=False):
+    def __init__(self, bundle_dir: Pathish, *, device: str='cuda', dtype: str='float32', validate_on_cpu: bool=False) -> None:
         if not isinstance(device, str):
             raise ValueError('device must be cpu, cuda or an indexed CUDA device.')
         if dtype not in ('float32', 'float16'):
@@ -94,7 +101,7 @@ class PyTorchPredictor:
             raise ValueError('Reference weights must be a nonempty flat state mapping.')
         if any(type(key) is not str or type(value) is not torch.Tensor for key, value in state.items()):
             raise ValueError('Reference weights must map exact names to plain tensors.')
-        model = EncoderDecoderFactory().build_model('segmentation', **args)
+        model = cast("Module", EncoderDecoderFactory().build_model('segmentation', **args))
         loaded = model.load_state_dict(state, strict=True)
         if loaded.missing_keys or loaded.unexpected_keys:
             raise ValueError('Strict reference loading reported missing or unexpected keys.')
@@ -107,7 +114,7 @@ class PyTorchPredictor:
                 or after['files_sha256'] != verified['files_sha256']):
             raise ValueError('Reference bundle changed during construction.')
 
-    def __call__(self, normalized_batch):
+    def __call__(self, normalized_batch: Array) -> FloatArray:
         if (not isinstance(normalized_batch, np.ndarray) or normalized_batch.ndim != 4
                 or tuple(normalized_batch.shape[1:]) != _INPUT_SHAPE
                 or not 1 <= normalized_batch.shape[0] <= 16
@@ -132,9 +139,9 @@ class PyTorchPredictor:
             logits = output.detach().to(device='cpu', dtype=self._torch.float32).contiguous().numpy()
         if not np.isfinite(logits).all():
             raise ValueError('Reference output cannot be represented as finite float32.')
-        return logits
+        return cast(FloatArray, logits)
 
-    def synchronize(self):
+    def synchronize(self) -> None:
         """Wait for this device before/after an explicitly timed benchmark."""
         if self._device.type == 'cuda':
             self._torch.cuda.synchronize(device=self._device)

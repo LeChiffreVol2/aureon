@@ -21,7 +21,12 @@ For suspected vulnerabilities, follow [SECURITY.md](SECURITY.md) and report priv
 
 | Path | Responsibility |
 | --- | --- |
-| [`aureon/api/`](aureon/api) | Public requests, results, model discovery and session interfaces |
+| [`aureon/api/`](aureon/api) | Stable user imports, requests, results, model discovery and session/scene orchestration |
+| [`aureon/planning/`](aureon/planning) | Framework-free placement, resource estimates and admission credits |
+| [`aureon/integrations/`](aureon/integrations) | Model/task/checkpoint bridges and explicit preprocessing |
+| [`aureon/terramind_native/`](aureon/terramind_native) | TerraMind execution, graph/reuse and model-state ownership |
+| [`aureon/scaling/`](aureon/scaling) | Replica execution and transport contracts |
+| [`aureon/sources/`](aureon/sources) | Local/STAC and controlled HTTP-range raster input |
 | [`aureon/prepare/`](aureon/prepare) | Input-preparation command line |
 | [`aureon/scene_pipeline/`](aureon/scene_pipeline) | Scene execution and geospatial streaming |
 | [`aureon/serving/`](aureon/serving) | Local service and client |
@@ -37,12 +42,31 @@ are implementation details, not a promise of API stability.
 
 ## Make and check a change
 
+This repository contains the reusable library, supported local service, examples,
+tests and public documentation. Product operations, customer records, private
+research material and competitor experiment environments are maintained separately.
+Main inference uses PyTorch/TerraTorch; an optional comparator is not a required
+runtime dependency. Shared checkpoint compatibility and third-party attribution
+remain where the supported workflows need them.
+
+See [library boundaries](packaging/LIBRARY-SCOPE.md) for what belongs in runtime,
+source-only tests and separate private operations. Tests of the reusable library
+stay public; private experiment drivers and provider/account tooling do not.
+
+Bring changes from experimental work into this repository as focused source,
+test and documentation changes. Follow the existing build allowlists instead of
+copying an entire development workspace. Record which exact artifact was tested;
+acceptance of an experimental wheel does not qualify a differently rebuilt wheel.
+Preserve immutable release tags and archives. Sanitized benchmark methods/results
+can be reviewed for public documentation separately from private data and tooling.
+
 Work in your own branch or fork with Python 3.12. Keep changes focused so reviewers
 can understand their effects on users, dependencies and numerical behavior.
 From the repository root, run:
 
 ```sh
 python3.12 -I -B tools/check_public_source.py
+python3.12 -I -B packaging/check_architecture.py
 python3.12 -B packaging/ci_cpu.py --output /tmp/aureon-cpu-result.json
 ```
 
@@ -80,3 +104,12 @@ Identify third-party sources and preserve their notices. Keep discussions focuse
 on the work, provide reproducible evidence and give other contributors useful context.
 
 Contact: [norviccompanylimited@gmail.com](mailto:norviccompanylimited@gmail.com).
+
+## Typed consumers and process tests
+
+Follow [Python contracts and CPU validation](packaging/TYPING.md) for strict
+consumer checks, bounded NumPy contracts and Linux service process tests.
+
+For a new model adapter, use the [resource and serving guide](packaging/SCALABLE-POLICY.md)
+and its CPU conformance runner. Declare lifecycle ownership and exact tested
+dependency profiles; distinguish executable capability from model/hardware evidence.

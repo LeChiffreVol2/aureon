@@ -1,4 +1,9 @@
 """Explicit local scene CLI, including bounded streaming through the resident worker."""
+
+from __future__ import annotations
+from collections.abc import Sequence
+from typing import cast
+from .value_types import JsonObject, Pathish
 import argparse
 from datetime import datetime, timezone
 import json
@@ -10,8 +15,8 @@ from time import perf_counter
 import uuid
 
 
-def run_streaming_scene(manifest, bundle, output, *, execute_model=False, model_id="kao-terramind-b",
-                        hourly_rate=1.0, currency="THB", min_free_bytes=2*1024**3):
+def run_streaming_scene(manifest: Pathish, bundle: Pathish, output: Pathish, *, execute_model: bool=False, model_id: str="kao-terramind-b",
+                        hourly_rate: float=1.0, currency: str="THB", min_free_bytes: int=2*1024**3) -> JsonObject:
     if execute_model is not True or sys.platform != "linux":
         raise ValueError("Streaming inference requires explicit --execute-model in Linux/WSL")
     if type(min_free_bytes) is not int or min_free_bytes < 0:
@@ -39,6 +44,7 @@ def run_streaming_scene(manifest, bundle, output, *, execute_model=False, model_
         raise ValueError("Insufficient free storage after reserving scene scratch and the private model bundle")
     from .scene_api.worker import ResidentSceneWorker
     output.mkdir()
+    cleanup: JsonObject | None
     worker = None
     job_id = uuid.uuid4().hex
     launch = {"schema": "aureon.streaming_scene_cli.v1", "status": "running", "model_id": model_id,
@@ -53,7 +59,7 @@ def run_streaming_scene(manifest, bundle, output, *, execute_model=False, model_
         worker = ResidentSceneWorker(bundle, {checked["scene_id"]: manifest}, output/"worker",
             execute_model=True, streaming=True, model_id=model_id, hourly_rate=hourly_rate, currency=currency)
         completed = worker.run_job(checked["scene_id"], job_id, output/"job")
-        cleanup = worker.close()
+        cleanup = cast(JsonObject, worker.close())
         worker = None
         if not cleanup.get("cleanup_passed") or not cleanup.get("full_identity_check_passed") or cleanup.get("errors"):
             raise RuntimeError("Worker cleanup/identity verification failed")
@@ -88,7 +94,7 @@ def run_streaming_scene(manifest, bundle, output, *, execute_model=False, model_
         raise
 
 
-def main(argv=None):
+def main(argv: Sequence[str] | None=None) -> int:
     parser = argparse.ArgumentParser(description="Explicit FP32 KAO-TerraMind scene inference; no acquisition")
     parser.add_argument("--manifest", required=True)
     parser.add_argument("--bundle", required=True)

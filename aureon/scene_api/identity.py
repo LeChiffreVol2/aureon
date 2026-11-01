@@ -3,6 +3,10 @@
 These guards detect ordinary file/tensor mutation. They are not new value hashes
 or a security boundary against another process with the same filesystem powers.
 """
+from __future__ import annotations
+from collections.abc import Sequence
+from .contracts import FileStamp, TensorStamp, SealedModel
+from ..serving.contracts import PathInput
 from pathlib import Path
 import stat
 
@@ -11,7 +15,7 @@ class WorkerIntegrityError(RuntimeError):
     pass
 
 
-def file_stamp(path):
+def file_stamp(path: PathInput) -> FileStamp:
     path = Path(path)
     value = path.lstat()
     # lstat describes the link itself. S_ISREG therefore rejects symlinks and
@@ -23,12 +27,12 @@ def file_stamp(path):
 
 
 class FileSeal:
-    def __init__(self, paths):
+    def __init__(self, paths: Sequence[PathInput]) -> None:
         if not paths:
             raise ValueError('Explicit identity members required')
         self._files = {str(Path(path).absolute()): file_stamp(path) for path in paths}
 
-    def verify(self):
+    def verify(self) -> int:
         for path, expected in self._files.items():
             try:
                 actual = file_stamp(path)
@@ -38,23 +42,23 @@ class FileSeal:
                 raise WorkerIntegrityError('Worker identity member changed: '+path)
         return len(self._files)
 
-    def records(self):
+    def records(self) -> dict[str, list[int]]:
         return {path: list(stamp) for path, stamp in self._files.items()}
 
 
 class TensorSeal:
-    def __init__(self, model):
+    def __init__(self, model: SealedModel) -> None:
         self._model = model
         self._state = self._describe()
 
-    def _describe(self):
+    def _describe(self) -> dict[str, TensorStamp]:
         if any(module.training for module in self._model.modules()):
             raise WorkerIntegrityError('Every resident model module must remain in evaluation mode')
         return {name: (tensor.data_ptr(), tuple(tensor.shape), str(tensor.dtype),
                        str(tensor.device), tensor._version, tensor.requires_grad)
                 for name, tensor in self._model.state_dict(keep_vars=True).items()}
 
-    def verify(self):
+    def verify(self) -> int:
         if self._describe() != self._state:
             raise WorkerIntegrityError('Resident tensor identity/version changed')
         return len(self._state)

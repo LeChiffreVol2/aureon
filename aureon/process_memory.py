@@ -1,4 +1,8 @@
 """Explicit process-local THP policy; never writes system-wide memory controls."""
+
+from __future__ import annotations
+from typing import cast
+from .value_types import ProcessMemoryPolicy
 import ctypes
 import os
 from pathlib import Path
@@ -9,19 +13,19 @@ PR_SET_THP_DISABLE=41
 PR_GET_THP_DISABLE=42
 
 
-def _prctl(option, value=0):
+def _prctl(option: int, value: int=0) -> int:
     libc=ctypes.CDLL(None,use_errno=True)
     function=libc.prctl
     function.argtypes=[ctypes.c_int,ctypes.c_ulong,ctypes.c_ulong,ctypes.c_ulong,ctypes.c_ulong]
     function.restype=ctypes.c_int
-    result=function(option,value,0,0,0)
+    result=cast(int, function(option,value,0,0,0))
     if result<0:
         error=ctypes.get_errno()
         raise OSError(error,os.strerror(error))
     return result
 
 
-def configure_process_memory(policy):
+def configure_process_memory(policy: str) -> ProcessMemoryPolicy:
     if sys.platform!='linux' or policy not in ('inherit','disable'):
         raise ValueError('Linux process THP policy must be inherit or disable')
     before=_prctl(PR_GET_THP_DISABLE)
@@ -31,7 +35,7 @@ def configure_process_memory(policy):
     if after!=(1 if policy=='disable' else before):
         raise RuntimeError('Requested process THP policy was not applied')
     root=Path('/sys/kernel/mm/transparent_hugepage')
-    controls={}
+    controls: dict[str, str | dict[str, str]] = {}
     for name in ('enabled','defrag','khugepaged/max_ptes_none','khugepaged/scan_sleep_millisecs'):
         try:
             controls[name]=(root/name).read_text().strip()

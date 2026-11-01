@@ -1,12 +1,14 @@
 """One existing all-valid 224px S2 crop and continuous synthetic COG delivery."""
+from __future__ import annotations
+from ._types import PathInput, Metadata, FloatArray, BoolArray
 from pathlib import Path
-from .common import INPUT_BANDS, binding, file_hash, read_json, verify_file, write_json
+from .common import INPUT_BANDS, binding, read_json, verify_file, write_json
 
 
-def prepare(source_manifest, output, *, row0=0, col0=0):
+def prepare(source_manifest: PathInput, output: PathInput, *, row0: int=0, col0: int=0) -> Metadata:
     import numpy as np
-    import rasterio
-    from rasterio.windows import Window
+    import rasterio  # Optional upstream typing is declared in the implementation-checker boundary policy.
+    from rasterio.windows import Window  # Optional upstream typing is declared in the implementation-checker boundary policy.
     source_manifest = Path(source_manifest).resolve(strict=True)
     source = read_json(source_manifest)
     if source.get("schema") != "aureon.sentinel2_scene.v1": raise ValueError("Expected existing real-scene manifest")
@@ -52,7 +54,7 @@ def prepare(source_manifest, output, *, row0=0, col0=0):
     return binding(output / "manifest.json")
 
 
-def load_input(path):
+def load_input(path: PathInput) -> tuple[FloatArray, BoolArray, Metadata]:
     import numpy as np
     path = Path(path)
     manifest = read_json(path)
@@ -67,11 +69,11 @@ def load_input(path):
     return image, mask, manifest
 
 
-def write_cog(output, values, mask, grid, provenance):
+def write_cog(output: PathInput, values: FloatArray, mask: BoolArray, grid: Metadata, provenance: Metadata) -> Metadata:
     import numpy as np
     import rasterio
-    from rasterio.io import MemoryFile
-    from rasterio.shutil import copy
+    from rasterio.io import MemoryFile  # Optional upstream typing is declared in the implementation-checker boundary policy.
+    from rasterio.shutil import copy  # Optional upstream typing is declared in the implementation-checker boundary policy.
     output = Path(output)
     if output.exists(): raise FileExistsError(output)
     if values.shape != (2,224,224) or values.dtype != np.float32 or not np.isfinite(values).all():

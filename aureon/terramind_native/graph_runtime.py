@@ -4,6 +4,11 @@ A binding supplies input admission/staging and the exact forward. There is one
 capture and one bounded buffer set, never a signature cache or generated-output
 cache. Injected backends are a CPU test seam, not CUDA qualification.
 """
+from __future__ import annotations
+from typing import cast
+from collections.abc import Callable, Iterator
+from ._types import TensorMap, TensorSignature, Graph, GraphBinding, GraphBackend, Metadata
+from torch import Tensor
 from contextlib import contextmanager
 from time import perf_counter
 import threading
@@ -11,14 +16,14 @@ import torch
 
 
 class CudaGraphBackend:
-    def capture(self, forward, buffers, stats):
+    def capture(self, forward: Callable[[TensorMap], Tensor], buffers: TensorMap, stats: Metadata) -> tuple[Graph, Tensor]:
         device = next(iter(buffers.values())).device
         graph = None
         with torch.cuda.device(device):
             cpu_rng = torch.get_rng_state()
             cuda_rng = torch.cuda.get_rng_state(device)
             try:
-                stream = torch.cuda.Stream(device=device)
+                stream = torch.cuda.Stream(device=device)  # type: ignore[no-untyped-call]  # PyTorch constructor lacks annotations.
                 stream.wait_stream(torch.cuda.current_stream(device))
                 with torch.cuda.stream(stream):
                     stats['warmup_stage_forwards'] += 1
@@ -47,7 +52,14 @@ class CudaGraphBackend:
 
 
 class FixedTensorGraph:
-    def __init__(self, binding, *, backend=None):
+    binding: GraphBinding | None
+    backend: GraphBackend | None
+    graph: Graph | None
+    output: Tensor | None
+    buffers: TensorMap
+    signature: TensorSignature | None
+    total: Metadata
+    def __init__(self, binding: GraphBinding, *, backend: GraphBackend | None=None) -> None:
         self.binding = binding
         self.backend = backend if backend is not None else CudaGraphBackend()
         self.graph = self.output = None
@@ -60,7 +72,7 @@ class FixedTensorGraph:
                       'extra_full_generations': 0, 'released': False, 'failed': False,
                       'owner_thread_id': self.owner_thread}
 
-    def owner(self):
+    def owner(self) -> None:
         if threading.get_ident() != self.owner_thread:
             raise RuntimeError('Graph owner thread differs')
         if self.closed:
@@ -69,14 +81,14 @@ class FixedTensorGraph:
             raise RuntimeError('Failed graph cannot be reused')
 
     @staticmethod
-    def _signature(inputs):
+    def _signature(inputs: TensorMap) -> TensorSignature:
         return tuple((name, tuple(value.shape), value.dtype, value.device)
                      for name, value in inputs.items())
 
-    def call(self, inputs):
+    def call(self, inputs: TensorMap) -> Tensor:
         self.owner()
         try:
-            self.binding.validate(inputs)
+            cast(GraphBinding, self.binding).validate(inputs)
             signature = self._signature(inputs)
             if self.signature is not None and signature != self.signature:
                 raise ValueError('Graph input signature changed; recapture is unsupported')
@@ -85,10 +97,10 @@ class FixedTensorGraph:
                 begin = perf_counter()
                 try:
                     self.signature = signature
-                    self.buffers = self.binding.stage(inputs, self.total)
+                    self.buffers = cast(GraphBinding, self.binding).stage(inputs, self.total)
                     if set(self.buffers) != set(inputs):
                         raise ValueError('Binding changed staged input names')
-                    self.graph, self.output = self.backend.capture(self.binding.forward, self.buffers, self.total)
+                    self.graph, self.output = cast(GraphBackend, self.backend).capture(cast(GraphBinding, self.binding).forward, self.buffers, self.total)
                     if not isinstance(self.output, torch.Tensor):
                         raise ValueError('Graph forward must return one tensor')
                     self.total['captured_shapes'] = {name: list(t.shape) for name, t in self.buffers.items()}
@@ -99,16 +111,16 @@ class FixedTensorGraph:
             # are copied before returning, so later replays cannot mutate them.
             for name, value in inputs.items():
                 self.buffers[name].copy_(value)
-            self.graph.replay()
+            cast(Graph, self.graph).replay()
             self.total['replay_stage_forwards'] += 1
-            return self.output.clone()
+            return cast(Tensor, self.output).clone()
         except BaseException:
             self.failed = True
             self.total['failed'] = True
             raise
 
     @contextmanager
-    def request(self):
+    def request(self) -> Iterator[None]:
         self.owner()
         if self.active:
             raise RuntimeError('Graph request is already active')
@@ -122,7 +134,7 @@ class FixedTensorGraph:
         finally:
             self.active = False
 
-    def close(self):
+    def close(self) -> Metadata:
         if threading.get_ident() != self.owner_thread:
             raise RuntimeError('Graph owner thread differs')
         if self.closed:
@@ -134,7 +146,7 @@ class FixedTensorGraph:
                 self.graph.reset()
         finally:
             try:
-                self.binding.close()
+                cast(GraphBinding, self.binding).close()
             finally:
                 self.buffers.clear()
                 self.graph = self.output = self.binding = self.backend = None

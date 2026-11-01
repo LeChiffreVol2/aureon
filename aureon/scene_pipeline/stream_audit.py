@@ -1,4 +1,7 @@
 """Offline streamed reference reconstruction and complete COG comparison."""
+
+from __future__ import annotations
+from ..value_types import Pathish, JsonObject
 from contextlib import ExitStack
 import json
 from pathlib import Path
@@ -10,12 +13,12 @@ from .stream_io import WindowSource,DiskBlend,CategorySink,windows,rio_window,_g
 from .streaming import ReferenceCursor,_cleanup_owned
 
 
-def audit_delivery(delivery,reference,output):
+def audit_delivery(delivery: Pathish,reference: Pathish,output: Pathish) -> JsonObject:
     """No GPU; fresh directory holds independent disk reconstruction and report."""
     import rasterio
     delivery,reference,output=map(Path,(delivery,reference,output))
     output.mkdir(exist_ok=False)
-    report={'schema':'aureon.streaming_audit.v1','status':'running'}
+    report: JsonObject = {'schema':'aureon.streaming_audit.v1','status':'running'}
     try:
         saved=json.loads((delivery/'streaming.json').read_text())
         reference_receipt=json.loads((reference/'reference.json').read_text())
@@ -79,7 +82,7 @@ def audit_delivery(delivery,reference,output):
     return report
 
 
-def audit_streaming_job(folder,output):
+def audit_streaming_job(folder: Pathish,output: Pathish) -> JsonObject:
     folder=Path(folder);output=Path(output)
     job=json.loads((folder/'job.json').read_text())
     if job.get('schema')!='aureon.streaming_scene_job.v1' or job.get('status')!='completed':

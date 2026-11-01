@@ -3,6 +3,19 @@
 No downloads or installations occur here. The CLI requires --execute-model and
 the prepared Linux runtime. This is a local job contract, not a public server.
 """
+
+from __future__ import annotations
+from collections.abc import MutableMapping
+from typing import cast
+from collections.abc import Iterable, Mapping
+from typing import TYPE_CHECKING
+from ..value_types import Pathish, Array, FloatArray, JsonObject, Closable
+from ..recipe import SegmentationResult
+from .core import PreparedTiles
+from .georaster import GeoRasterInput
+if TYPE_CHECKING:
+    from ..graph_pipeline import FullGroupGraphPipeline
+
 import argparse
 from datetime import datetime, timezone
 import hashlib
@@ -28,7 +41,7 @@ from .predictor import FullEightEagerTailAdapter, SequentialEagerAdapter
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def file_hash(path):
+def file_hash(path: Pathish) -> str:
     digest = hashlib.sha256()
     with Path(path).open('rb') as stream:
         for chunk in iter(lambda: stream.read(1024*1024), b''):
@@ -36,18 +49,18 @@ def file_hash(path):
     return digest.hexdigest()
 
 
-def canonical_hash(value):
+def canonical_hash(value: object) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(',', ':'),
                                     allow_nan=False).encode()).hexdigest()
 
 
-def write_json(path, value):
+def write_json(path: Path, value: object) -> None:
     with Path(path).open('x', encoding='utf-8') as stream:
         json.dump(value, stream, indent=2, ensure_ascii=False, allow_nan=False)
         stream.write('\n')
 
 
-def _relative_file(folder, name):
+def _relative_file(folder: Path, name: str) -> Path:
     if not isinstance(name, str) or not name or Path(name).is_absolute():
         raise ValueError('Scene files must use relative paths within the manifest directory')
     path = folder / name
@@ -56,7 +69,7 @@ def _relative_file(folder, name):
     return path.resolve()
 
 
-def load_manifest(path, *, max_evidence_bytes=128*1024*1024):
+def load_manifest(path: Pathish, *, max_evidence_bytes: int=128*1024*1024) -> tuple[JsonObject, dict[str, Path], str]:
     if type(max_evidence_bytes) is not int or not 0 < max_evidence_bytes <= 2*1024**3:
         raise ValueError('Manifest evidence budget must be positive and at most 2 GiB')
     path = Path(path).resolve(strict=True)
@@ -72,14 +85,14 @@ def load_manifest(path, *, max_evidence_bytes=128*1024*1024):
     if not isinstance(raster.get('crs'), str) or not raster['crs']:
         raise ValueError('Scene manifest must explicitly declare its CRS')
     members = {}
-    computed = {}
-    def content_digest(member):
+    computed: dict[Path, str] = {}
+    def content_digest(member: Path) -> str:
         # Content was read in this invocation; never reuse across phases/jobs.
         if member not in computed:
             computed[member] = file_hash(member)
         return computed[member]
-    declarations = []
-    def collect(value):
+    declarations: list[JsonObject] = []
+    def collect(value: object) -> None:
         if isinstance(value, dict):
             if 'path' in value and 'sha256' in value:
                 declarations.append(value)
@@ -111,7 +124,7 @@ def load_manifest(path, *, max_evidence_bytes=128*1024*1024):
     return manifest, members, hashlib.sha256(raw).hexdigest()
 
 
-def _read_source(manifest, members):
+def _read_source(manifest: JsonObject, members: Mapping[str, Path]) -> GeoRasterInput:
     from .georaster import read_s2_geotiff
     source = read_s2_geotiff(members['raster'], bands=manifest['raster']['bands'],
         units=manifest['raster']['units'], expected_crs=manifest['raster']['crs'],
@@ -126,7 +139,7 @@ def _read_source(manifest, members):
     return source
 
 
-def _close_resources(resources):
+def _close_resources(resources: Iterable[tuple[str, Closable | None]]) -> list[dict[str, str]]:
     errors = []
     for name, resource in resources:
         if resource is not None:
@@ -137,7 +150,7 @@ def _close_resources(resources):
     return errors
 
 
-def _verify_input_files(identity):
+def _verify_input_files(identity: object) -> None:
     """Include GDAL sidecars discovered during admission in postflight checks."""
     if isinstance(identity, dict):
         if 'path' in identity and 'sha256' in identity:
@@ -150,16 +163,16 @@ def _verify_input_files(identity):
             _verify_input_files(child)
 
 
-def _sources():
+def _sources() -> dict[str, str]:
     selected = [ROOT/'aureon'/name for name in (
-        'recipe.py', 'reference.py', 'runtime.py', 'catalog.py', 'vllm_bundle.py',
+        'recipe.py', 'reference.py', 'runtime.py', 'catalog.py', 'checkpoint_bundle.py',
         'cuda_graph.py', 'graph_pipeline.py', 'process_memory.py', 'preflight.py', 'scene_cli.py')]
     selected += [p for p in (ROOT/'aureon'/'prepare').glob('*.py') if not p.name.startswith('test_')]
     selected += [p for p in Path(__file__).parent.glob('*.py') if not p.name.startswith('test_')]
     return {p.relative_to(ROOT).as_posix(): file_hash(p) for p in selected}
 
 
-def _snapshot(folder, hashes):
+def _snapshot(folder: Path, hashes: Mapping[str, str]) -> None:
     for name, digest in hashes.items():
         target = folder/'source-snapshot'/name
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -170,15 +183,15 @@ def _snapshot(folder, hashes):
             stream.write(data)
 
 
-def _save_array(path, values):
+def _save_array(path: Pathish, values: Array) -> None:
     with Path(path).open('xb') as stream:
         np.save(stream, values, allow_pickle=False)
 
 
-def _reference_scene(source, prepared, reference_logits):
+def _reference_scene(source: GeoRasterInput, prepared: PreparedTiles, reference_logits: FloatArray) -> SegmentationResult:
     """Use the unchanged recipe as a separate CPU tiling/stitching reference."""
     position = 0
-    def saved_prediction(values):
+    def saved_prediction(values: FloatArray) -> FloatArray:
         nonlocal position
         end = position + len(values)
         if not np.array_equal(values, prepared.values[position:end]):
@@ -193,7 +206,7 @@ def _reference_scene(source, prepared, reference_logits):
     return result
 
 
-def _valid_area(source):
+def _valid_area(source: GeoRasterInput) -> JsonObject:
     # Geographic/angular grids are rejected for this area/cost calculation.
     import rasterio
     crs = rasterio.crs.CRS.from_user_input(source.metadata['crs'])
@@ -209,8 +222,8 @@ def _valid_area(source):
             'crs_linear_units': unit_name, 'geodesic_area': False}
 
 
-def run_job(manifest_path, bundle_dir, output_dir, *, execute_model=False,
-            hourly_rate=1.0, currency='THB'):
+def run_job(manifest_path: Pathish, bundle_dir: Pathish, output_dir: Pathish, *, execute_model: bool=False,
+            hourly_rate: float=1.0, currency: str='THB') -> JsonObject:
     if execute_model is not True:
         raise ValueError('Explicit execute_model=True / --execute-model is required')
     if sys.platform != 'linux':
@@ -223,6 +236,9 @@ def run_job(manifest_path, bundle_dir, output_dir, *, execute_model=False,
         raise ValueError('Create the job parent directory explicitly before starting')
     output.mkdir(exist_ok=False)
     job_id = uuid.uuid4().hex
+    graph: FullGroupGraphPipeline | None
+    eager: SequentialEagerAdapter | None
+    candidate: FullEightEagerTailAdapter | None
     graph = eager = candidate = None
     completed = False
     stages, validation = {}, {}
@@ -348,7 +364,7 @@ def run_job(manifest_path, bundle_dir, output_dir, *, execute_model=False,
         stages['stitch_argmax_seconds'] = perf_counter()-start
         start = perf_counter()
         parity = compare_logits(reference_logits, predicted)
-        parity.update(scene_class_map_equal=bool(np.array_equal(result.class_map, reference_result.class_map)),
+        cast(MutableMapping[str, object], parity).update(scene_class_map_equal=bool(np.array_equal(result.class_map, reference_result.class_map)),
                       scene_mask_equal=bool(np.array_equal(result.valid_mask, reference_result.valid_mask)),
                       normalization_and_tile_order_equal=True,
                       warmup=first_check, reversed_input_probe=reversed_check,
@@ -462,7 +478,7 @@ def run_job(manifest_path, bundle_dir, output_dir, *, execute_model=False,
                 pass
 
 
-def main(argv=None):
+def main(argv: list[str] | None=None) -> None:
     parser = argparse.ArgumentParser(description='Explicit FP32 KAO-TerraMind B georeferenced scene job')
     parser.add_argument('--manifest', required=True)
     parser.add_argument('--bundle', required=True)

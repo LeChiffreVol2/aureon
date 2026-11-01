@@ -1,0 +1,84 @@
+{
+  "code_revision": "453f829234abd7f1cde8a6ad2b51968c37865204",
+  "source": {
+    "libs/copgen.py": {
+      "sha256": "9ff9eb53e5f98ad03a04e40f202b8d47aa64bc2607a5ce2b958721b07c736729",
+      "bytes": 18215
+    },
+    "libs/autoencoder.py": {
+      "sha256": "f0ce64d648ea67c76900001dddab5b49442ae62afed75857eda26424e1b30796",
+      "bytes": 19499
+    },
+    "utils.py": {
+      "sha256": "7a1e0987bf2e5d8392c8a748c1da3711a6f2c8c6a73d0cf77b2b8d64a3495986",
+      "bytes": 16466
+    },
+    "dpm_solver_pp.py": {
+      "sha256": "d41210e5fcf13ad25dbbe140f52d5d11607bf34a4dd63abc123b8ba627a5aaf3",
+      "bytes": 50205
+    },
+    "setup.py": {
+      "sha256": "c09d36b6431296efb2c14a9feaeea62b148a6a0c5d7f38398d743daeff9976c0",
+      "bytes": 643
+    },
+    "environment.yml": {
+      "sha256": "a98473927fc51739819caea29d5512dacafe5a5e97394321a9bf15192f8c5fc8",
+      "bytes": 10313
+    },
+    "examples/conditional_generation.py": {
+      "sha256": "4ad9450f65c7af0b3f0f8082382bab0e9ea8bbdfb9e7f166eae1e6ab94b3b85f",
+      "bytes": 18286
+    },
+    "LICENSE": {
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "bytes": 11357
+    },
+    "configs/copgen/discrete/cop_gen_base.py": {
+      "sha256": "76756a7806d36d31f683d58300901be02ea4687175533f7661a60e16651af6af",
+      "bytes": 12934
+    },
+    "configs/copgen/discrete/demo_edinburgh.py": {
+      "sha256": "a83fbac67e64e3ce68e2723e887f86eb9c741a58077849a4a5ceede45d00a85e",
+      "bytes": 12455
+    },
+    "ddm/pre_post_process_data.py": {
+      "sha256": "cc1ab4051c635d9b5f03343eb2278077c1704a120740fd491ed697ace72aa0d8",
+      "bytes": 18591
+    },
+    "libs/copgen_multi_post_ln.py": {
+      "sha256": "58e9338f8805d1569fd4f9a8872a16ac7dc41f4061e3f6347cf73f5b27743136",
+      "bytes": 13589
+    },
+    "datasets.py": {
+      "sha256": "ec0ad2a4c91b9c4a0e008d588136a74ce8ba6cf5e380f4c2140bc27d91e66b04",
+      "bytes": 50515
+    },
+    "libs/timm.py": {
+      "sha256": "f1e414e5060038baba231ba30959bb1274839ebb1ba7649d3564288731a6babd",
+      "bytes": 4360
+    }
+  },
+  "assets": {
+    "500000_nnet_ema.pth": {
+      "sha256": "a4ca88206803b20cfc09aae4e86ff5fba94f80912810740ba83866720d1d37a6",
+      "bytes": 1148064180,
+      "revision": "2d087d47d973494ec281f8093967d9d70d5f8682",
+      "repository": "mespinosami/copgen-base",
+      "license": "cc-by-4.0"
+    },
+    "S1RTC_192x192_VV_VH_latent_8/model-50-ema.pth": {
+      "sha256": "42d3934142057e9c8282530edc92920e587442e3eb4974dfb0afce2f078e9c19",
+      "bytes": 334906606,
+      "revision": "13f55445a0e25dda791c1691249d9d913ba554b4",
+      "repository": "mespinosami/copgen-vaes",
+      "license": "cc-by-4.0"
+    },
+    "S2L2A_192x192_B4_3_2_8_latent_8/model-50-ema.pth": {
+      "sha256": "5efae4401319a2f802fc3b9731fb83334fc0be42ea01b4deb34f635690272bb7",
+      "bytes": 334925038,
+      "revision": "13f55445a0e25dda791c1691249d9d913ba554b4",
+      "repository": "mespinosami/copgen-vaes",
+      "license": "cc-by-4.0"
+    }
+  }
+}

@@ -5,6 +5,19 @@ are never retried automatically. Downloads are bounded and verified against
 the completed job, with a commit receipt written only after every check passes.
 """
 from __future__ import annotations
+from collections.abc import Iterator
+from typing import Never, Self, TypedDict, Unpack, cast
+from .value_types import JsonObject, Pathish, HashDigest
+
+class _ClientOptions(TypedDict, total=False):
+    timeout: float
+    max_artifact_bytes: int
+
+class _RequestOptions(TypedDict, total=False):
+    payload: Mapping[str, object] | None
+    key: str | None
+    timeout: float | None
+
 
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -35,7 +48,7 @@ class ClientError(RuntimeError):
 
 
 class APIError(ClientError):
-    def __init__(self, status: int, code: str, message: str, retry_after: str | None):
+    def __init__(self, status: int, code: str, message: str, retry_after: str | None) -> None:
         super().__init__(f"HTTP {status} ({code}): {message}")
         self.status, self.code, self.retry_after = status, code, retry_after
 
@@ -43,14 +56,14 @@ class APIError(ClientError):
 class SubmissionUncertain(ClientError):
     """A submission may have reached the server; reuse its original key."""
 
-    def __init__(self, scene_id: str, idempotency_key: str):
+    def __init__(self, scene_id: str, idempotency_key: str) -> None:
         super().__init__("Submission outcome is unknown. Check the service and explicitly "
                          "resubmit the same scene with the same idempotency key; do not create a new key.")
         self.scene_id, self.idempotency_key = scene_id, idempotency_key
 
 
 class JobNotCompleted(ClientError):
-    def __init__(self, job: Job):
+    def __init__(self, job: Job) -> None:
         super().__init__(f"Job {job.job_id} is {job.status}")
         self.job = job
 
@@ -80,39 +93,39 @@ class Delivery:
     receipt: Path
 
 
-def _require(condition, message):
+def _require(condition: object, message: str) -> None:
     if not condition:
         raise ClientError(message)
 
 
-def _seconds(value, name):
+def _seconds(value: object, name: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0:
         raise ValueError(name + " must be a finite positive number")
     return float(value)
 
 
-def _job_id(value):
+def _job_id(value: object) -> str:
     if not isinstance(value, str) or not _JOB.fullmatch(value):
         raise ValueError("job_id must be 32 lowercase hexadecimal characters")
     return value
 
 
-def _decode(data):
-    def pairs(items):
+def _decode(data: bytes) -> JsonObject:
+    def pairs(items: list[tuple[str, object]]) -> dict[str, object]:
         result = {}
         for key, value in items:
             if key in result:
                 raise ValueError("duplicate JSON key")
             result[key] = value
         return result
-    def constant(unused):
+    def constant(unused: str) -> Never:
         raise ValueError("non-finite JSON constant")
     try:
         result = json.loads(data.decode("utf-8"), object_pairs_hook=pairs, parse_constant=constant)
     except (ValueError, UnicodeError, RecursionError):
         raise ClientError("Response is not strict UTF-8 JSON") from None
     _require(isinstance(result, dict), "Expected a JSON object")
-    return result
+    return cast(JsonObject, result)
 
 
 class SceneClient:
@@ -124,7 +137,7 @@ class SceneClient:
     """
 
     def __init__(self, base_url: str, *, token: str, timeout: float = 30,
-                 max_artifact_bytes: int = 512 * 1024 * 1024):
+                 max_artifact_bytes: int = 512 * 1024 * 1024) -> None:
         parsed = urlsplit(base_url)
         if (parsed.scheme not in {"http", "https"} or not parsed.hostname
                 or parsed.username is not None or parsed.password is not None
@@ -154,7 +167,7 @@ class SceneClient:
         self.max_artifact_bytes = max_artifact_bytes
 
     @classmethod
-    def from_token_file(cls, base_url, token_file, **kwargs):
+    def from_token_file(cls, base_url: str, token_file: Pathish, **kwargs: Unpack[_ClientOptions]) -> Self:
         path = Path(token_file)
         details = path.lstat()
         if not stat.S_ISREG(details.st_mode) or not 1 <= details.st_size <= 4096:
@@ -166,7 +179,7 @@ class SceneClient:
         return cls(base_url, token=raw.decode("ascii").strip(), **kwargs)
 
     @contextmanager
-    def _response(self, method, path, *, payload=None, key=None, timeout=None):
+    def _response(self, method: str, path: str, *, payload: Mapping[str, object] | None=None, key: str | None=None, timeout: float | None=None) -> Iterator[http.client.HTTPResponse]:
         headers = {"Authorization": "Bearer " + self._token, "Connection": "close",
                    "Accept-Encoding": "identity"}
         body = None
@@ -195,7 +208,7 @@ class SceneClient:
             connection.close()
 
     @staticmethod
-    def _length(response, limit):
+    def _length(response: http.client.HTTPResponse, limit: int) -> int:
         values = response.headers.get_all("Content-Length", [])
         _require(len(values) == 1 and re.fullmatch(r"[0-9]{1,16}", values[0]) is not None,
                  "Expected one bounded Content-Length")
@@ -206,20 +219,21 @@ class SceneClient:
         return size
 
     @classmethod
-    def _read(cls, response, limit):
+    def _read(cls, response: http.client.HTTPResponse, limit: int) -> bytes:
         size = cls._length(response, limit)
         data = response.read(size + 1)
         _require(len(data) == size, "Truncated response")
         return data
 
-    def _json(self, method, path, **kwargs):
+    def _json(self, method: str, path: str, **kwargs: Unpack[_RequestOptions]) -> JsonObject:
         with self._response(method, path, **kwargs) as response:
             _require(response.status in {200, 202}, "Unexpected successful API status")
             return _decode(self._read(response, _JSON_LIMIT))
 
-    def _job(self, value, *, expected_id=None, expected_scene=None):
+    def _job(self, value: JsonObject, *, expected_id: str | None=None, expected_scene: str | None=None) -> Job:
         raw = value.get("job")
         _require(isinstance(raw, dict), "Missing job object")
+        raw = cast(JsonObject, raw)
         identifier, scene, status = raw.get("job_id"), raw.get("scene_id"), raw.get("status")
         _require(isinstance(identifier, str) and _JOB.fullmatch(identifier), "Invalid job identity")
         _require(isinstance(scene, str) and 1 <= len(scene) <= 256 and isinstance(status, str) and status in _STATES,
@@ -240,9 +254,9 @@ class SceneClient:
             parsed[name] = Artifact(name, url, item["sha256"], item["bytes"])
         reused = value.get("reused")
         _require(reused is None or type(reused) is bool, "Invalid idempotency replay indicator")
-        return Job(identifier, scene, status, MappingProxyType(parsed), reused)
+        return Job(cast(str, identifier), cast(str, scene), cast(str, status), MappingProxyType(parsed), cast(bool | None, reused))
 
-    def info(self):
+    def info(self) -> JsonObject:
         """Read registered scenes and actual resident-worker metadata."""
         return self._json("GET", "/v1/info")
 
@@ -260,7 +274,7 @@ class SceneClient:
         except (OSError, http.client.HTTPException, ClientError):
             raise SubmissionUncertain(scene_id, idempotency_key) from None
 
-    def get(self, job_id: str, *, timeout=None) -> Job:
+    def get(self, job_id: str, *, timeout: float | None=None) -> Job:
         identifier = _job_id(job_id)
         if timeout is not None:
             timeout = _seconds(timeout, "timeout")
@@ -287,8 +301,8 @@ class SceneClient:
                 raise JobNotCompleted(job)
             time.sleep(min(interval, max(0, deadline - time.monotonic())))
 
-    def download(self, job_id: str, output_dir, *, expected_source_sha256=None,
-                 expected_bundle_sha256=None) -> Delivery:
+    def download(self, job_id: str, output_dir: Pathish, *, expected_source_sha256: str | None=None,
+                 expected_bundle_sha256: str | None=None) -> Delivery:
         """Download a complete, verified scene into a fresh directory.
 
         Verifies transport hashes and linked receipts, not pixel/model accuracy.
@@ -298,6 +312,7 @@ class SceneClient:
         job = self.get(job_id)
         if job.status != "completed":
             raise JobNotCompleted(job)
+        digest: str | None | HashDigest
         for digest in (expected_source_sha256, expected_bundle_sha256):
             if digest is not None and (not isinstance(digest, str) or not _SHA.fullmatch(digest)):
                 raise ValueError("Expected identities must be lowercase SHA-256 digests")
@@ -347,8 +362,8 @@ class SceneClient:
         return Delivery(job.job_id, directory, MappingProxyType(files), receipt)
 
     @staticmethod
-    def _verify_receipts(job, files, expected_source, expected_bundle):
-        def read(path):
+    def _verify_receipts(job: Job, files: Mapping[str, Path], expected_source: str | None, expected_bundle: str | None) -> None:
+        def read(path: Path) -> JsonObject:
             with path.open("rb") as stream:
                 data = stream.read(_JSON_LIMIT + 1)
             _require(len(data) <= _JSON_LIMIT, "Receipt JSON exceeds its size limit")
@@ -364,6 +379,7 @@ class SceneClient:
         provenance = delivery.get("provenance")
         _require(isinstance(provenance, dict) and provenance.get("job_id") == job.job_id
                  and provenance.get("scene_id") == job.scene_id, "Provenance identity mismatch")
+        provenance = cast(JsonObject, provenance)
         for key, expected in (("source_manifest_sha256", expected_source), ("bundle_receipt_sha256", expected_bundle)):
             actual = execution.get(key)
             _require(isinstance(actual, str) and _SHA.fullmatch(actual) and provenance.get(key) == actual,
@@ -384,7 +400,7 @@ class SceneClient:
                          and item.get("bytes") == descriptor.bytes, "COG differs from delivery receipt")
 
 
-def main(argv=None):
+def main(argv: list[str] | None=None) -> int:
     """Explicit CLI client; requires a separately started, authorized worker."""
     import argparse
     import sys

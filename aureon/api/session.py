@@ -1,15 +1,30 @@
 """Resident public lifecycle; numerical execution stays in existing workers."""
+from __future__ import annotations
+from typing import TYPE_CHECKING, cast, TypeAlias
+from ..terramind_native._types import Metadata
+if TYPE_CHECKING:
+    from ..scene_api.worker import ResidentSceneWorker
+    from ..cloud.contracts import GuardedExecutor, QualificationBinding
+
+RunPayload: TypeAlias = "tuple[str | PathLike[str], str | None, str | None, Callable[[], bool] | None]"
+SessionValue: TypeAlias = "SceneResult | Metadata"
+
+from collections.abc import Callable
 from concurrent.futures import Future
 from copy import deepcopy
 from importlib import metadata as packages
 import json
 from pathlib import Path
+from os import PathLike
 from queue import Queue
 import re
 import threading
 import traceback
 import uuid
+from types import TracebackType
+from typing import Any, Literal
 
+from .lifecycle import close_preserving_error
 from .profiles import require_profile
 from .v1 import ExecutionRequired, SceneResult, PROFILES, _hash, _json, _write
 
@@ -32,17 +47,20 @@ _PROCESS_OWNER = threading.Lock()
 class _Backend:
     """Private bridge to existing serial workers, constructed on the owner."""
 
-    def __init__(self, bundle, work, profile, qualification):
+    worker: ResidentSceneWorker | None
+    executor: GuardedExecutor | None
+
+    def __init__(self, bundle: Path, work: Path, profile: str, qualification: Metadata | None) -> None:
         self.bundle, self.work, self.profile = bundle, work, profile
         self.worker = self.executor = None
         if profile != PROFILES[0]:
             from ..cloud.profiles import engine_for
             self.executor = engine_for(profile).ResidentExecutor(
-                bundle, work, qualification, execute_model=True)
+                bundle, work, cast("QualificationBinding", qualification), execute_model=True)
         else:
             work.mkdir()
 
-    def run(self, manifest, job_id, attempt_id):
+    def run(self, manifest: Path, job_id: str, attempt_id: str) -> dict[str, Path]:
         attempt = self.work/attempt_id
         attempt.mkdir(exist_ok=True)
         if self.executor is not None:
@@ -69,11 +87,11 @@ class _Backend:
         result = self.worker.run_job(scene, job_id, output)
         return {name: output/item["path"] for name, item in result["download_artifacts"].items()}
 
-    def metadata(self):
+    def metadata(self) -> Metadata | None:
         worker = self.executor.worker if self.executor is not None else self.worker
         return worker.metadata() if worker is not None else None
 
-    def close(self):
+    def close(self) -> Metadata | None:
         if self.executor is not None:
             return self.executor.close()
         if self.worker is not None:
@@ -92,8 +110,15 @@ class EngineSession:
     subsequent shutdown; inspect the separate cleanup receipt.
     """
 
-    def __init__(self, bundle, work, *, model_id="kao-terramind-b", profile_id,
-                 environment="scene", qualification=None, execute_model=False):
+    _qualification: Metadata | None
+    _worker_metadata: Metadata | None
+    _cleanup: Metadata | None
+    _backend: _Backend | None
+    _commands: Queue[tuple[str, RunPayload | None, Future[SessionValue] | None]]
+    _thread: threading.Thread | None
+
+    def __init__(self, bundle: str | PathLike[str], work: str | PathLike[str], *, model_id: str="kao-terramind-b", profile_id: str,
+                 environment: str="scene", qualification: str | PathLike[str] | None=None, execute_model: bool=False) -> None:
         if execute_model is not True:
             raise ExecutionRequired("Pass execute_model=True explicitly; no model was imported or started")
         if model_id != "kao-terramind-b" or environment != "scene" or profile_id not in PROFILES:
@@ -137,7 +162,7 @@ class EngineSession:
             "qualification_sha256": self._qualification["sha256"] if self._qualification else None,
             "scope": "Resident serial KAO-TerraMind B; job success and session shutdown are separate"})
 
-    def _call(self, command, payload=None):
+    def _call(self, command: str, payload: RunPayload | None=None) -> SessionValue:
         if not self._gate.acquire(blocking=False):
             raise SessionBusy("One session call is already in flight; no call was queued")
         try:
@@ -152,7 +177,7 @@ class EngineSession:
             if self._state in ("failed", "closed") and command != "close":
                 raise SessionClosed("Session is terminal; create a new session explicitly")
             if command == "run":
-                manifest, job_id, attempt_id, current = payload
+                manifest, job_id, attempt_id, current = cast(RunPayload, payload)
                 if job_id is None:
                     job_id = uuid.uuid4().hex
                 if not isinstance(job_id, str) or re.fullmatch(r"[0-9a-f]{32}", job_id) is None:
@@ -180,7 +205,7 @@ class EngineSession:
                 self._thread = threading.Thread(target=self._owner, name="aureon-engine-session-"+self._id,
                                                 daemon=False)
                 self._thread.start()
-            future = Future()
+            future: Future[SessionValue] = Future()
             self._commands.put_nowait((command, payload, future))
             try:
                 return future.result()
@@ -190,17 +215,17 @@ class EngineSession:
         finally:
             self._gate.release()
 
-    def _owner(self):
+    def _owner(self) -> None:
         while True:
             command, payload, future = self._commands.get()
             if command == "stop":
                 return
             try:
-                result = self._shutdown() if command == "close" else self._run(*payload)
+                result: SessionValue = self._shutdown() if command == "close" else self._run(*cast("tuple[Path, str, str, Callable[[], bool] | None]", payload))
             except SessionBusy as error:
-                future.set_exception(error)
+                cast("Future[SessionValue]", future).set_exception(error)
             except BaseException as error:
-                detail = {"error_type": type(error).__name__, "error": str(error),
+                detail: Metadata = {"error_type": type(error).__name__, "error": str(error),
                           "traceback": traceback.format_exc()}
                 # Traceback frames can own CUDA tensors. Keep text evidence,
                 # clear frames before cleanup, and return a fresh public error.
@@ -213,13 +238,13 @@ class EngineSession:
                     _write(self._work/"session-failure.json", detail)
                 except OSError:
                     pass
-                future.set_exception(SessionFailed(detail["error_type"]+": "+detail["error"]))
+                cast("Future[SessionValue]", future).set_exception(SessionFailed(detail["error_type"]+": "+detail["error"]))
             else:
-                future.set_result(result)
+                cast("Future[SessionValue]", future).set_result(result)
             if command == "close":
                 return
 
-    def _run(self, manifest, job_id, attempt_id, current):
+    def _run(self, manifest: Path, job_id: str, attempt_id: str, current: Callable[[], bool] | None) -> SceneResult:
         if current is not None and current() is not True:
             raise RuntimeError("Attempt is stale before execution")
         if not self._owns_process:
@@ -280,7 +305,7 @@ class EngineSession:
                            Path(paths["valid_mask.tif"]), Path(paths["provenance.json"]),
                            self._profile, numerical, receipt)
 
-    def _shutdown(self, *, failed=False):
+    def _shutdown(self, *, failed: bool=False) -> Metadata:
         if self._cleanup is None:
             result = None
             try:
@@ -310,7 +335,7 @@ class EngineSession:
         self._state = "failed" if failed else "closed"
         return deepcopy(self._cleanup)
 
-    def _metadata(self):
+    def _metadata(self) -> Metadata:
         worker = deepcopy(self._worker_metadata)
         return {"schema": "aureon.engine_session_metadata.v1", "session_id": self._id,
                 "state": self._state, "profile_id": self._profile, "model_id": "kao-terramind-b",
@@ -319,21 +344,27 @@ class EngineSession:
                 "owner_thread_id": self._thread.ident if self._thread else None,
                 "maximum_in_flight_calls": 1, "queued_calls": 0}
 
-    def run(self, prepared_input, *, job_id=None, attempt_id=None, is_current_attempt=None):
-        return self._call("run", (prepared_input, job_id, attempt_id, is_current_attempt))
+    def run(self, prepared_input: str | PathLike[str], *, job_id: str | None = None,
+            attempt_id: str | None = None,
+            is_current_attempt: Callable[[], bool] | None = None) -> SceneResult:
+        return cast(SceneResult, self._call("run", (prepared_input, job_id, attempt_id, is_current_attempt)))
 
-    def metadata(self):
-        return self._call("metadata")
+    def metadata(self) -> dict[str, Any]:
+        return cast(Metadata, self._call("metadata"))
 
-    def close(self):
-        return self._call("close")
+    def close(self) -> dict[str, Any]:
+        return cast(Metadata, self._call("close"))
 
-    def __enter__(self):
+    def __enter__(self) -> EngineSession:
         return self
 
-    def __exit__(self, exc_type, exc, tb):
-        cleanup = self.close()
-        if exc_type is None and (not cleanup.get("cleanup_passed") or cleanup.get("errors")
-                                 or cleanup.get("cleanup_receipt_persisted") is False):
-            raise SessionFailed("Session shutdown failed; inspect session-cleanup.json")
+    def __exit__(self, exc_type: type[BaseException] | None, exc: BaseException | None,
+                 tb: TracebackType | None) -> Literal[False]:
+        def checked_close() -> None:
+            cleanup = self.close()
+            if (not cleanup.get("cleanup_passed") or cleanup.get("errors")
+                    or cleanup.get("cleanup_receipt_persisted") is False):
+                raise SessionFailed("Session shutdown failed; inspect session-cleanup.json")
+
+        close_preserving_error(checked_close, exc, context="Engine session cleanup failed")
         return False
