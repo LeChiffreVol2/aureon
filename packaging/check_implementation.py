@@ -22,6 +22,9 @@ EXTERNAL = ("terratorch", "rasterio", "affine", "orjson", "pybase64")
 # This zero-argument upstream bool query lacks a return annotation in Torch.
 # Keep every owned function strict; exempt only this provider call, not torch.cuda.
 UNTYPED_PROVIDER_CALLS = ("torch.cuda.is_initialized",)
+# Torch 2.10 declares Event.record(self, stream=None) without any annotations;
+# Torch 2.11 annotates stream. This external method is not an owned-code exemption.
+UNTYPED_TORCH210_CALLS = ("torch.cuda.streams.Event.record",)
 
 
 def coverage(path: Path) -> dict[str, object]:
@@ -49,6 +52,10 @@ def main(argv=None):
         parser.error("Scratch and output must be fresh")
     if importlib.metadata.version("mypy") != "1.11.2":
         parser.error("Use the existing mypy 1.11.2 environment; nothing will be installed")
+    torch_version = importlib.metadata.version("torch")
+    provider_calls = UNTYPED_PROVIDER_CALLS + (
+        UNTYPED_TORCH210_CALLS if torch_version.split("+", 1)[0] == "2.10.0" else ()
+    )
     scratch.mkdir(parents=True)
     output.parent.mkdir(parents=True, exist_ok=True)
     inventory = json.loads((source / "packaging/runtime-files.json").read_text())["files"]
@@ -76,7 +83,7 @@ def main(argv=None):
     assert not list(mirror.rglob("*.pyi"))
     config = scratch / "mypy.ini"
     contents = "[mypy]\npython_version = 3.12\nplatform = linux\nstrict = True\nfollow_imports = silent\nshow_error_codes = True\nno_error_summary = True\npretty = False\n"
-    contents += "untyped_calls_exclude = " + ",".join(UNTYPED_PROVIDER_CALLS) + "\n"
+    contents += "untyped_calls_exclude = " + ",".join(provider_calls) + "\n"
     contents += "mypy_path = " + str(mirror) + "\n"
     for module in EXTERNAL:
         contents += f"\n[mypy-{module},{module}.*]\nfollow_imports = skip\nignore_missing_imports = True\n"
@@ -105,13 +112,17 @@ def main(argv=None):
                "all_owned_implementations_explicit_targets": True,
                "frozen_source_exception": frozen, "strict_target_count": len(targets),
                "external_implementation_skips": list(EXTERNAL),
-               "untyped_provider_calls": list(UNTYPED_PROVIDER_CALLS),
+               "untyped_provider_calls": list(provider_calls),
                "typed_providers": {name: importlib.metadata.version(name) for name in ("torch", "numpy")},
                "files": rows, "diagnostics": diagnostics, "diagnostic_counts": dict(Counter(d["code"] for d in diagnostics)),
                "raw_checker_output": log, "model_calls": 0, "dependencies_installed": False}
     output.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({"passed": receipt["passed"], "implementations": len(rows),
                       "diagnostics": len(diagnostics), "counts": receipt["diagnostic_counts"], "receipt": str(output)}))
+    if result.returncode:
+        # Keep failures actionable in CI even when the detailed receipt is local
+        # to an ephemeral runner. Do not suppress or reclassify diagnostics.
+        print(log, file=sys.stderr, end="" if log.endswith("\n") else "\n")
     return 0 if receipt["passed"] else 1
 
 

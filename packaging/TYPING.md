@@ -42,6 +42,14 @@ an exact `untyped_calls_exclude` entry for that function. It does not exclude
 runtime code. Its initialization behavior is also exercised by the installed
 CPU and real-device lifecycle checks.
 
+Torch **2.10.0** also declares `torch.cuda.streams.Event.record(self, stream=None)`
+without annotations; 2.11 annotates its stream argument. For 2.10.0 only (including
+local CPU/CUDA build suffixes), the checker records that exact external method in
+`untyped_calls_exclude`. Its AUREON call sites still use typed `Event`/`Stream`
+values and remain strict targets. No AUREON function, whole provider module or
+other diagnostic is excluded. The receipt lists the installed provider version
+and precise boundaries; failures also print their full diagnostics in CI logs.
+
 Historical comparison tools and their preservation gates belong to a separate
 project. Public CI checks the reusable library and does not fetch historical
 competitor Git objects. [Distribution boundaries](LIBRARY-SCOPE.md) prevent
