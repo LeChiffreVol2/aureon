@@ -1,6 +1,23 @@
 # Supported models and qualification
 
-**Runtime selection:** one local v0.1.0 distribution, identified by its exact delivery receipt ([installation guide](../packaging/CANDIDATE-QUICKSTART.md)). Compatible TerraMind base file, array and HTTP scene routes share the preserved graph/reuse primitives. Version alone does not identify artifact bytes or qualify every route. Historical cohorts below keep their original artifact scope; current acceptance and timing belong to the receipt shipped with the selected delivery.
+**Runtime selection:** one selected public v0.1.0 distribution, identified by its exact delivery receipt ([installation guide](../packaging/CANDIDATE-QUICKSTART.md)). Compatible TerraMind base file, array and HTTP scene routes share the preserved graph/reuse primitives. Version alone does not identify artifact bytes or qualify every route. Historical cohorts below keep their original artifact scope; current acceptance and timing belong to the receipt shipped with the selected delivery.
+
+## Current Best release (2026-11-02)
+
+The current GitHub download is wheel
+`e09e710c9e9ace17b7bf2214d8c9eff2c4ed605a7d45e8c4e649b672f6f88a64`.
+Its retained acceptance covers TerraMind base native 224 and 448 × 320
+four-tile scenes, plus local HTTP and private Cloud scene paths: 26 complete
+generation calls with exact FP32 output/token/RNG parity and seven resident
+owners closing with CUDA allocation/reservation at zero. The private Cloud
+path is test evidence, not an available hosted API. The later 14-call diagnostic
+retained parity and does not establish an additional speedup. Publication ran
+no new inference or benchmark. See [release notes](releases/v0.1.0.md).
+
+KAO-TerraMind and other family qualifications below retain their original
+artifact identities; publishing this wheel does not relabel those earlier
+results as a fresh Best-wheel acceptance. The historical performance table
+also keeps its original measured wheel and workload scope.
 
 ## Retained development candidate acceptance
 
@@ -28,10 +45,10 @@ dependency provisioning. Exact parity preserves the existing TerraMind tile
 seams; it does not establish seamless imagery or scientific realism. Recorded
 scene times are acceptance observations, not a new speedup qualification.
 
-## Local source extension
+## Available interfaces and separate qualification
 
 TerraMind 1.0 tiny/small/base/large have explicit Generation, Backbone and TiM
-SDK/CLI interfaces in the local v0.1.0 candidate. The selected HTTP worker executes
+SDK/CLI interfaces in the selected v0.1.0 package. The selected HTTP worker executes
 TerraMind base `generation` and `generation_scene`; it rejects other generation
 sizes and the `features` executor before model loading. Feature transport schemas
 remain available for integration tests, not executable HTTP support. Use the
@@ -44,7 +61,7 @@ RTX 3070 with exact FP32 parity; one tiny-generation HTTP flow also passes.
 See the family guide for the exact artifact and restricted input/recipe scope.
 No new comparative performance or general production qualification is claimed.
 
-The local scalability candidate provides hardware-independent resource planning,
+The selected package provides hardware-independent resource planning,
 bounded independent graph lanes and [replica/state/delivery contracts](../packaging/SCALABLE-RUNTIME.md).
 CPU simulations and loopback workers validate control flow, not GPU scaling.
 The unpublished tensor-batch route is retired; recommended/reference generation remains available.

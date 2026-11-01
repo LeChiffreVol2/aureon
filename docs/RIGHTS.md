@@ -62,3 +62,20 @@ No runtime or dependency change, rebuild or new benchmark was needed for approva
 **AUREON Foundation by Norvique** denotes a project under **Norvique Company**,
 not a separately incorporated foundation. Contact and private security reporting:
 **norviccompanylimited@gmail.com**. No response-time SLA is promised.
+
+## Best artifact continuity (2026-11-02)
+
+The attached Best v0.1.0 wheel SHA256
+`e09e710c9e9ace17b7bf2214d8c9eff2c4ed605a7d45e8c4e649b672f6f88a64`
+and matching source archive SHA256
+`586682c5e404da145ad99ac917f284fc45e49aef759f48283a2995903a2be02a`
+retain the identified band order, normalization means/standard deviations,
+ordered class names, class count and nodata value. Static comparison of these
+literal values against the original approved wheel found no changes. The
+existing disposition continues to cover that unchanged material; this does
+not extend its scope, create an upstream grant or resolve the disclosed TODO.
+
+The original rights decision and original release assets remain available in
+the same GitHub release. Neither archive was rebuilt for this update. Historical
+embedded release-status wording is superseded by the current release notes;
+licenses, exclusions, attribution and artifact-specific test scopes remain.

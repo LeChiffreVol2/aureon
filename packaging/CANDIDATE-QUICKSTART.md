@@ -8,34 +8,50 @@ that installed package; no model subprocess adapter or second wheel is required.
 Adding features changes the archive hash. The delivery receipt identifies the
 integrated wheel; `0fa5ef2b…` remains the immutable numerical/performance origin,
 not a second installation choice. Historical failed builds remain evidence.
-Published GitHub artifacts and historical comparison numbers remain unchanged.
-PyPI, hosted activation, deployment and publication remain closed.
+Best is available from GitHub Release v0.1.0. Historical artifacts and comparison
+numbers are preserved; hosted inference and PyPI remain closed.
 
 The locked local wheel SHA256 is
 `e09e710c9e9ace17b7bf2214d8c9eff2c4ed605a7d45e8c4e649b672f6f88a64`.
-Verify this identity before installation. The published GitHub alpha is a
-separate retained release; this local selection does not replace its downloads.
+Verify this identity before installation. The current [GitHub release](https://github.com/LeChiffreVol2/aureon/releases/tag/v0.1.0)
+provides these exact Best bytes. Original alpha assets remain under historical
+names; the Git tag and automatic source snapshots retain their original identity.
 
 ## Install the reviewed archive
 
-Use Linux/WSL, Python 3.12 and the pinned compatible generation environment.
-The local delivery receipt and SHA256SUMS identify the one current wheel. In an
-already prepared environment without another AUREON build:
+Use a fresh Linux x86_64 / WSL2 Python 3.12 environment. For normal dependency
+resolution, install the hash-pinned wheel:
 
 ```sh
-set -eu
-cd /absolute/path/to/selected-delivery
-sha256sum --check SHA256SUMS
-python -I -c "from importlib.metadata import distributions; import sys; sys.exit('Use an environment without another AUREON build') if any((d.metadata.get('Name', '').lower().replace('_', '-') == 'aureon-inference') for d in distributions()) else None"
-python -m pip install --no-index --no-deps ./aureon_inference-0.1.0-py3-none-any.whl
-cd /absolute/path/outside/source-checkouts
-python -I -m aureon.api --help
-python -I -m aureon.serving --help
+python -m pip install "https://github.com/LeChiffreVol2/aureon/releases/download/v0.1.0/aureon_inference-0.1.0-py3-none-any.whl#sha256=e09e710c9e9ace17b7bf2214d8c9eff2c4ed605a7d45e8c4e649b672f6f88a64"
 ```
 
-The package declares generation dependencies. Use the pinned constraints when
-preparing a new environment; no dependency installation or weight download is
-implicit in the SDK. No PyPI publication is claimed.
+For the tested Torch 2.10 / TerraTorch 1.2.13 generation snapshot, download the
+wheel and source archive, verify their hashes below, and extract the source.
+Use its locks from a new environment:
+
+```sh
+tar -xzf aureon_inference-0.1.0.tar.gz
+python3.12 -m venv "$HOME/aureon-best-env"
+. "$HOME/aureon-best-env/bin/activate"
+python -m pip install --require-hashes -r aureon_inference-0.1.0/packaging/lock-bootstrap-generation.txt
+python -m pip install --require-hashes --no-build-isolation -r aureon_inference-0.1.0/packaging/lock-generation-linux-py312-cu128.txt
+python -m pip install --no-index --no-deps ./aureon_inference-0.1.0-py3-none-any.whl
+python -m pip check
+aureon-engine check --environment generation
+```
+
+Follow the current quickstart for pinned model assets, input preparation and
+explicit CLI/SDK/local HTTP execution. Installation does not acquire model
+weights or imagery and does not run inference. KAO-TerraMind full-reference
+routes use the documented optional scene-legacy dependencies and their own scope.
+
+The original alpha and Best both have version 0.1.0. A version-only upgrade may
+retain the old wheel, so use a fresh environment and verify SHA-256. Do not mix
+the original scene/cu130 stack with this generation environment. The source
+archive is the frozen matching build input; its earlier unpublished-status text
+is superseded by this release note only. Rebuilding source creates a distinct
+artifact. No developer/private kit is published in this update.
 
 ## Direct resident Best
 

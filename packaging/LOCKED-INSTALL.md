@@ -4,7 +4,7 @@ Use the [single current AUREON distribution](CANDIDATE-QUICKSTART.md).
 Generation dependencies are included by default; no separate feature/core wheel
 is needed. `[generation]` and `[geo]` remain compatibility extras on the same
 distribution. Plain pip installation uses the normal resolver and build isolation.
-The current working delivery remains unpublished; PyPI is not open.
+The current Best delivery is available on GitHub; PyPI is not open.
 
 The tested generation stack uses Linux/WSL Python 3.12, Torch 2.10.0,
 TorchVision 0.25.0, TerraTorch 1.2.13 and NumPy 2.2.6. Use matching source-archive

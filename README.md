@@ -33,8 +33,8 @@ that installed package; no model subprocess adapter or second wheel is required.
 Adding features changes the archive hash. The delivery receipt identifies the
 integrated wheel; `0fa5ef2b…` remains the immutable numerical/performance origin,
 not a second installation choice. Historical failed builds remain evidence.
-Published GitHub artifacts and historical comparison numbers remain unchanged.
-PyPI, hosted activation, deployment and publication remain closed.
+GitHub Release v0.1.0 now provides this exact Best wheel. Original assets and
+historical comparison numbers are preserved. PyPI and hosted inference remain closed.
 See the [selected installation guide](packaging/CANDIDATE-QUICKSTART.md).
 
 AUREON is an open-source inference engine built for **Generative Foundation Models
@@ -81,8 +81,8 @@ physical multi-GPU speed.
 
 The local candidate adds [prepared-scene generation, DataLoader integration and
 read-only runtime diagnostics](packaging/PRODUCT-WORKFLOWS.md). Consult that guide
-for limits and artifact qualification; these additions are not in the original
-published alpha wheel.
+for limits and artifact qualification; the current Best download includes these interfaces; original alpha receipts
+retain their earlier artifact scope.
 
 | Model | Task | Input → output | Start here |
 | --- | --- | --- | --- |
@@ -97,11 +97,20 @@ hardware and qualification. Generated S1GRD is synthetic imagery, not an observe
 
 **Linux x86_64 or WSL2 · Python 3.12 · NVIDIA GPU for model execution**
 
-Install the current local wheel using the [single distribution guide](packaging/CANDIDATE-QUICKSTART.md),
+Install the current Best wheel using the [single distribution guide](packaging/CANDIDATE-QUICKSTART.md),
 then follow [input/asset preparation and generation](packaging/BEST-WORKFLOWS.md).
 The model/tokenizer and user imagery remain explicit assets and are not bundled.
-The [previous public alpha](https://github.com/LeChiffreVol2/aureon/releases/tag/v0.1.0)
-is retained unchanged; it is not this unpublished working delivery.
+[Download Best v0.1.0](https://github.com/LeChiffreVol2/aureon/releases/tag/v0.1.0).
+The wheel SHA-256 is `e09e710c9e9ace17b7bf2214d8c9eff2c4ed605a7d45e8c4e649b672f6f88a64`. Original alpha assets remain under historical
+names on the same release; verify hashes rather than version alone.
+
+```sh
+python -m pip install "https://github.com/LeChiffreVol2/aureon/releases/download/v0.1.0/aureon_inference-0.1.0-py3-none-any.whl#sha256=e09e710c9e9ace17b7bf2214d8c9eff2c4ed605a7d45e8c4e649b672f6f88a64"
+```
+
+Use a fresh Linux/WSL Python 3.12 environment. For the tested pinned stack, use
+the matching source archive locks and [release instructions](docs/releases/v0.1.0.md).
+An existing installation also named 0.1.0 may still contain the original wheel.
 
 After installation, inspect your environment without loading a model:
 

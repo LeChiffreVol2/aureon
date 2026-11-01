@@ -3,9 +3,8 @@
 Use the [single current distribution](CANDIDATE-QUICKSTART.md), then follow the
 [TerraMind scene and resident workflow](BEST-WORKFLOWS.md). It selects the
 preserved best FP32 graph/reuse core for the qualified base workflow by default.
-No separate feature/core package is required. This local v0.1.0 working delivery
-is not published; existing GitHub release files remain unchanged and PyPI/hosted
-inference remain closed.
+No separate feature/core package is required. This Best v0.1.0 delivery is available
+on GitHub. Original assets remain preserved; PyPI and hosted inference remain closed.
 
 The commands below cover CPU preparation and retained model-specific workflows.
 Their earlier GPU evidence retains its original artifact scope; the latest
