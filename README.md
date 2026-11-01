@@ -183,11 +183,10 @@ For installation problems, see [troubleshooting](packaging/SUPPORT.md).
 
 **AUREON Foundation by Norvique** is a project of **Norvique Company**.
 AUREON-owned contributions are licensed under [Apache-2.0](LICENSE).
-Model weights and datasets retain their respective terms.
-
-With acknowledgments to KAO-TerraMind, TerraMind, TerraTorch and PyTorch.
-[Third-party attribution](packaging/review/THIRD-PARTY-NOTICES.md) ·
-[NOTICE](NOTICE) · [Licensing scope](docs/RIGHTS.md)
+We acknowledge the work of KAO-TerraMind, TerraMind, TerraTorch and PyTorch.
+See [NOTICE](NOTICE), [third-party attribution](packaging/review/THIRD-PARTY-NOTICES.md)
+and [licensing scope](docs/RIGHTS.md) for details. Model weights and datasets
+retain their respective terms.
 
 Contact: [norviccompanylimited@gmail.com](mailto:norviccompanylimited@gmail.com).
 Report vulnerabilities privately through [SECURITY.md](SECURITY.md).

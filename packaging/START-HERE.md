@@ -70,11 +70,10 @@ aureon prepare-vllm --model kao-terramind-b \
 aureon verify-bundle --bundle "$HOME/aureon-assets/kao-terramind-b"
 ```
 
-Despite its historical name, `prepare-vllm` creates the local bundle also used
-by the Engine; it does not start vLLM, execute inference or download anything.
-It checks the pinned size/hash before CPU weights-only deserialization and refuses
-to overwrite output. It may use CPU memory and disk for conversion. No operator
-must create the bundle for you. The receipt establishes identity, not model parity.
+This command creates the local bundle used by AUREON Engine. It verifies the
+pinned checkpoint identity before CPU weights-only conversion, using CPU memory
+and disk. It does not start inference or download files. Output is not
+overwritten; the receipt establishes identity, not model parity.
 
 ## Prepare user-owned Sentinel-2 input
 
