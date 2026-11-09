@@ -1,6 +1,6 @@
 # Borrowed models, temporal features and explicit adapters
 
-These additive Python interfaces belong to the unpublished v0.1.0 candidate.
+These Python interfaces are included in the selected Best v0.1.0 wheel (`e09e710c`).
 They do not change the native TerraMind generation kernels, preprocessing or
 checkpoint identities. CPU compatibility is tested with real tensors and the
 installed TerraTorch 1.2.13 implementation. No pretrained, speed or new GPU

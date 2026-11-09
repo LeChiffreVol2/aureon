@@ -21,6 +21,9 @@ PUBLIC_FILES = {
     'tools/check_selected_engine.py', 'tools/test_selected_engine.py', 'packaging/review/SELECTED-ENGINE.json',
     '.github/ISSUE_TEMPLATE/bug_report.md', '.github/ISSUE_TEMPLATE/feature_request.md',
     '.github/ISSUE_TEMPLATE/config.yml', '.github/pull_request_template.md',
+    'docs/EVALUATION.md', 'docs/FIRST-USE.md', 'release/quality-v0.1.0.json',
+    'tools/install.py', 'tools/check_distribution.py', 'tools/test_distribution.py',
+    'tools/check_index_metadata.py', 'docs/PUBLISHING.md',
 }
 
 

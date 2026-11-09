@@ -66,6 +66,8 @@ From the repository root, run:
 
 ```sh
 python3.12 -I -B tools/check_public_source.py
+python3.12 -I -B tools/check_distribution.py
+python3.12 -I -B tools/test_distribution.py
 python3.12 -I -B packaging/check_architecture.py
 python3.12 -B packaging/ci_cpu.py --output /tmp/aureon-cpu-result.json
 ```
@@ -82,6 +84,11 @@ allowlists in `packaging/runtime-files.json` and `packaging/build_review.py`.
 Native geospatial tests require the appropriate locked profile. Model execution
 needs explicitly scoped validation; CPU fixtures do not establish numerical
 parity, model quality or performance gains.
+
+Use the [evaluation methods](docs/EVALUATION.md) to scope efficiency or usability
+claims. Follow the [publication procedure](docs/PUBLISHING.md) before enabling
+package-index distribution. Installed artifact identity and source documentation
+are checked separately.
 
 ## Open a pull request
 

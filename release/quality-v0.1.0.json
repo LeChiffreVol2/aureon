@@ -1,0 +1,73 @@
+{
+  "schema": "aureon.quality_record.v1",
+  "reviewed_on": "2026-11-09",
+  "version": "0.1.0",
+  "selected_wheel_sha256": "e09e710c9e9ace17b7bf2214d8c9eff2c4ed605a7d45e8c4e649b672f6f88a64",
+  "performance_wheel_sha256": "0fa5ef2b9440fcc310a17c76f78df52278cbe2d354015be2046a8e4196715c97",
+  "performance_applies_to_selected_wheel": false,
+  "download": "github-release",
+  "pypi_open": false,
+  "hosted_api_open": false,
+  "external_user_study_completed": false,
+  "platform": "Linux x86_64 / WSL2, Python 3.12; generation lock",
+  "evidence": [
+    {
+      "dimension": "functional_fidelity",
+      "status": "qualified_within_scope",
+      "scope": "26 exact FP32 calls in selected-wheel acceptance, including scene/HTTP/private Cloud delivery; seven resident cleanups. See model support for artifact-specific scope."
+    },
+    {
+      "dimension": "competitor_performance",
+      "status": "historical_measured",
+      "scope": "Original 224x224 TerraMind cohort: +25.88% queued throughput, -27.70% sequential latency, -20.56% normalized warm cost; mixed allocated/reserved memory."
+    },
+    {
+      "dimension": "current_wheel_performance",
+      "status": "not_established",
+      "scope": "No matched current-wheel competitor speedup or general non-regression claim."
+    },
+    {
+      "dimension": "installation",
+      "status": "team_validated",
+      "scope": "Public installer freshly validated on Linux/Python 3.12 with hash-locked cached archives, 239 installed payloads, six CLI checks and CPU pixels/grid walkthrough; not an external user study or Internet-download measurement."
+    },
+    {
+      "dimension": "usability",
+      "status": "not_measured",
+      "scope": "Measure unassisted task success, time, errors, assistance and satisfaction with external developers."
+    },
+    {
+      "dimension": "scientific_quality",
+      "status": "not_established",
+      "scope": "FP32 parity and COG correctness do not establish SAR realism, scene seams or downstream utility."
+    },
+    {
+      "dimension": "sustained_service",
+      "status": "not_established",
+      "scope": "Finite recovery/CPU tests do not qualify sustained CUDA workload or hosted SLA."
+    },
+    {
+      "dimension": "physical_scaling",
+      "status": "not_measured",
+      "scope": "Simulation validates dispatch contracts; physical multi-GPU/multi-host performance remains unqualified."
+    },
+    {
+      "dimension": "precision_portability",
+      "status": "not_established",
+      "scope": "Keep FP32 reference; qualify faster precision and GPU profiles individually against a declared quality budget."
+    }
+  ],
+  "index_metadata_ready": false,
+  "installer_validation": {
+    "date": "2026-11-09",
+    "fresh_linux_python312": true,
+    "installed_payloads": 239,
+    "cli_checks": 6,
+    "cpu_pixels_and_grid_verified": true,
+    "offline_dependency_cache": true,
+    "elapsed_seconds": 73.175190399,
+    "model_calls": 0,
+    "engine_rebuilt": false,
+    "external_user": false
+  }
+}

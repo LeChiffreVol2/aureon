@@ -25,17 +25,9 @@
 
 ---
 
-The locked main v0.1.0 package (`e09e710c…`) integrates features directly with the Best runtime
-derived from `0fa5ef2b…`. Its original run, owner thread, FP32 sampling, graph/reuse
-and cleanup are retained. Scenes, SDK/CLI, local HTTP and private Cloud consume
-that installed package; no model subprocess adapter or second wheel is required.
-
-Adding features changes the archive hash. The delivery receipt identifies the
-integrated wheel; `0fa5ef2b…` remains the immutable numerical/performance origin,
-not a second installation choice. Historical failed builds remain evidence.
-GitHub Release v0.1.0 now provides this exact Best wheel. Original assets and
-historical comparison numbers are preserved. PyPI and hosted inference remain closed.
-See the [selected installation guide](packaging/CANDIDATE-QUICKSTART.md).
+**Public alpha v0.1.0.** Install one Engine for Python, CLI and local HTTP.
+Start with TerraMind generation and your own Sentinel-2 imagery. The current
+GitHub download is Best `e09e710c`; PyPI and hosted inference are not open.
 
 AUREON is an open-source inference engine built for **Generative Foundation Models
 for Earth Observation**, with support for the broader Earth foundation model family.
@@ -49,11 +41,11 @@ on your own machine; the landing page describes the wider platform direction.
 Built on TerraTorch and PyTorch, AUREON brings input validation, resident
 inference and geospatial result delivery into one workflow.
 
-The local candidate also adds [bounded stage execution and remote replica
+The package includes [bounded stage execution and remote replica
 contracts](packaging/SCALABLE-RUNTIME.md): typed job handles, resource credits,
 tenant fairness, durable leases and verified artifact delivery. Native hardware
 capability and numerical qualification are separate. These interfaces do not
-claim measured multi-GPU/multi-host scaling or change the published downloads.
+claim measured multi-GPU/multi-host scaling.
 
 ## Whole scenes and repeated jobs
 
@@ -68,6 +60,10 @@ performance figures retain their original experiment scope. Exact numerical
 parity does not establish seamless physical quality, long-load stability or
 physical multi-GPU speed.
 
+Read [how we evaluate quality and efficiency](docs/EVALUATION.md) for measurement
+boundaries, numerical quality, usability and remaining qualification. Historical
+competitor percentages stay attached to the original measured Best `0fa5ef2b`.
+
 ## Why AUREON?
 
 | Built for | What you get |
@@ -79,7 +75,7 @@ physical multi-GPU speed.
 
 ## Supported workflows
 
-The local candidate adds [prepared-scene generation, DataLoader integration and
+The package includes [prepared-scene generation, DataLoader integration and
 read-only runtime diagnostics](packaging/PRODUCT-WORKFLOWS.md). Consult that guide
 for limits and artifact qualification; the current Best download includes these interfaces; original alpha receipts
 retain their earlier artifact scope.
@@ -107,6 +103,17 @@ names on the same release; verify hashes rather than version alone.
 ```sh
 python -m pip install "https://github.com/LeChiffreVol2/aureon/releases/download/v0.1.0/aureon_inference-0.1.0-py3-none-any.whl#sha256=e09e710c9e9ace17b7bf2214d8c9eff2c4ed605a7d45e8c4e649b672f6f88a64"
 ```
+
+For an isolated, reproducible setup from this checkout, use:
+
+```sh
+python3.12 tools/install.py --execute --prefix "$HOME/aureon-env"
+```
+
+The installer verifies the unchanged release wheel, installs hash-locked
+dependencies, checks installed payloads and runs the CPU preparation walkthrough.
+Use `--plan` to preview. [First-use instructions and feedback](docs/FIRST-USE.md)
+cover offline installation, input preparation and recovery.
 
 Use a fresh Linux/WSL Python 3.12 environment. For the tested pinned stack, use
 the matching source archive locks and [release instructions](docs/releases/v0.1.0.md).

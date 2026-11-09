@@ -1,7 +1,6 @@
 # Explicit conditioning and generated targets
 
-These APIs belong to the current unreleased v0.1.0 source. The unchanged published
-alpha does not contain them. Any-to-any is the architecture direction: each adapter
+These APIs are included in the selected Best v0.1.0 wheel (`e09e710c`). Any-to-any is the architecture direction: each adapter
 must implement and validate a route before the planner admits it. COP-GEN remains
 a candidate and is not registered as supported.
 
