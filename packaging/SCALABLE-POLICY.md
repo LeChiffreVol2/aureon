@@ -117,41 +117,15 @@ false. Optional version snapshots support deployment planning but are caller
 assertions, not worker attestations. Local build suffixes are retained in the
 result; compatible CPU API versions do not qualify those builds for GPU execution.
 
-No dependency ranges were widened. The default wheel retains its native pins.
-An **explicit core build profile** offers the same package/import name with no
-mandatory runtime dependencies and separate exact backend extras. It is an
-alternative build of version 0.1.0, not a second package to co-install. From a
-reviewed source checkout, ordinary pip dependency resolution can use:
+The selected Best distribution retains the exact native generation dependencies.
+Use that one installed package for supported workflows. The CPU compatibility
+matrix does not qualify generation on Torch 2.11 or a different GPU stack.
 
-```bash
-# Existing Torch 2.11 CPU integration; pip resolves dependencies normally.
-python -m pip install ".[borrowed-torch211]" --config-settings aureon-profile=core
-
-# Or select the tested Torch 2.10 CPU bridge.
-python -m pip install ".[borrowed-torch210]" --config-settings aureon-profile=core
-```
-
-The core extras are `borrowed-torch210`, `borrowed-torch211`, `geo`, `generation`,
-`copgen` and `scene-legacy`. The last three retain their exact native dependencies;
-selecting `generation` does not permit Torch 2.11. Without extras, core supports
-dependency-light planning/imports only; actual adapters need their declared
-runtime dependencies. No automatic downloads or backend selection are added.
-PEP 517 metadata preparation and wheel construction use the same selected profile.
-The staged sdist records it explicitly so rebuilding does not revert to default.
-
-Core is currently a local developer build option, not a separately published
-release. Use separate output directories and record profile plus artifact hash:
-core/default share the package name, version and wheel filename. Do not put both
-in one index or directory. If replacing an already installed AUREON at the same
-version, remove that AUREON distribution first; retain the environment's Torch
-and other dependencies, then install the selected profile normally. Native GPU
-acceptance does not transfer to core or to Torch 2.11.
-
-Maintainers can stage/build it with `packaging/build_review.py --profile core
---output <fresh-directory>` in the pinned build environment. The default command
-still builds the original native dependency profile. Metadata-only resolver
-validation does not establish an installed core wheel; that check belongs to the
-final merged build.
+The build backend retains a `core` profile for contributor dependency-resolution
+and CPU-bridge tests. It is not a recommended user installation or a second
+published runtime. Building it produces a different artifact, even though the
+package name and version are shared. Its tests cannot replace selected-wheel
+acceptance. Keep such contributor builds isolated and preserve their identities.
 
 Use the [locked install guide](LOCKED-INSTALL.md) for ordinary native installation and
 keep conflicting native stacks separate. Hosted CI coverage is configured in the

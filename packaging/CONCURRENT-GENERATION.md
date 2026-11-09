@@ -14,7 +14,7 @@ The unpublished `NeuralBatchConfig`, `NeuralBatchSession` and `neural_batch=`
 experiment are retired. Omit them from old examples; immutable older wheels keep
 their original contents. Existing queue/lane/replica interfaces remain available.
 
-**Integrated source, unreleased · v0.1.0.** This checkout contains `GenerationEngine.submit`, ordered `generate_many`,
+**Best v0.1.0 interfaces.** This checkout contains `GenerationEngine.submit`, ordered `generate_many`,
 explicit upstream adapters, raster-scene helpers and a placement planner. The
 package version remains **0.1.0**. A reviewed source build needs its own wheel
 and source-archive SHA256 values. The original public GitHub release and earlier

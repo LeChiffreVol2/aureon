@@ -1,9 +1,9 @@
 # Use AUREON from your Earth observation workflow
 
-**Working source, unreleased · v0.1.0.** Use one distribution identified by
+**Best v0.1.0 interfaces.** Use one distribution identified by
 the [installation guide](../packaging/CANDIDATE-QUICKSTART.md) and its exact
 delivery receipt. There is no separate core/feature installation choice.
-Existing GitHub release files remain unchanged until explicitly replaced.
+GitHub Release v0.1.0 provides Best `e09e710c`; original artifacts retain their historical names.
 
 Compatible TerraMind base file, array and HTTP scene routes share the preserved
 graph/reuse/RNG primitives. Array inference keeps its owned-memory contract.
@@ -394,7 +394,7 @@ Other generation modalities and COP-GEN remain unsupported candidates.
 
 ## Additional explicit adapters and raster sources
 
-Use [borrowed models, temporal features and adapter registration](../packaging/BORROWED-ADAPTERS.md) for caller-owned FP32 modules and actual upstream CPU aggregation. Use [bounded STAC windows](../packaging/STAC-WINDOWS.md) to connect explicit assets to the existing scene executor. These interfaces belong to the unpublished candidate; CUDA adapters and live remote providers retain separate qualification.
+Use [borrowed models, temporal features and adapter registration](../packaging/BORROWED-ADAPTERS.md) for caller-owned FP32 modules and actual upstream CPU aggregation. Use [bounded STAC windows](../packaging/STAC-WINDOWS.md) to connect explicit assets to the existing scene executor. These interfaces are included in the selected Best wheel; CUDA adapters and live remote providers retain separate qualification.
 
 The [experimental COP-GEN namespace](../aureon/copgen_native/PROFILE.md) provides a Torch2.10
 optional extra and a separate legacy Torch2.6 source profile. It does not change the normal TerraMind

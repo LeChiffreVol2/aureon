@@ -2,7 +2,7 @@
 
 ## Local source extension: bounded preparation and device ownership
 
-**Integrated source, unreleased · v0.1.0.** These operations describe current
+**Best v0.1.0 interfaces.** These operations describe current
 source. The unchanged published release and prior private GPU acceptance retain
 their own artifact identities. No new build or GPU qualification is implied.
 Use [release installation](START-HERE.md) for the published wheel and the

@@ -1,6 +1,6 @@
 # Local replica service and finite capacity
 
-**Integrated source, unreleased · v0.1.0.** The replica modules in this checkout
+**Best v0.1.0 interfaces.** The replica modules in this checkout
 are absent from the unchanged published GitHub wheel. Prior installed GPU
 acceptance belongs to separately identified private artifacts; it is not
 acceptance of a new public-source build. This guide describes the source

@@ -57,7 +57,7 @@ SDK process dispatch are described in [resident workflows](../packaging/RESIDENT
 is unchanged. See [the 12-mode support matrix](../packaging/MODEL-SUPPORT.md)
 and [asset/input/output contracts](../packaging/TERRAMIND-FAMILIES.md).
 Earlier artifact-specific cohorts passed all twelve size/mode SDK/CLI routes on
-RTX 3070 with exact FP32 parity; one tiny-generation HTTP flow also passes.
+RTX 3070 with exact FP32 parity; one earlier tiny-generation HTTP flow also passed on its recorded artifact.
 See the family guide for the exact artifact and restricted input/recipe scope.
 No new comparative performance or general production qualification is claimed.
 
@@ -101,7 +101,7 @@ and [release checksums](releases/v0.1.0.md). No new benchmark was run for public
 These retained results belong to the original measured Best wheel `0fa5ef2b9440fcc310a17c76f78df52278cbe2d354015be2046a8e4196715c97`.
 The current integrated package is `e09e710c9e9ace17b7bf2214d8c9eff2c4ed605a7d45e8c4e649b672f6f88a64`;
 it retains its separate functional acceptance, not these competitor percentages.
-The published alpha is also a separate artifact. The 2026-10-27 comparison used TerraMind
+The original alpha is preserved separately; the current published download is the integrated Best wheel. The 2026-10-27 comparison used TerraMind
 1.0 base, all-valid S2L2A 224 × 224 → synthetic S1GRD, highest FP32, RTX 3070,
 8 token / 10 diffusion steps, and local IPC batch-one execution with FIFO depth
 three. This was not an HTTP benchmark. All 28 requests retained exact reference

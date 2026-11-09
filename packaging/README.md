@@ -14,8 +14,8 @@ delivery for multimodal and generative Earth models.
 - [Operator checks](https://github.com/LeChiffreVol2/aureon/blob/main/packaging/SERVICE-OPERATIONS.md)
 - [Model support](https://github.com/LeChiffreVol2/aureon/blob/main/packaging/MODEL-SUPPORT.md) and [troubleshooting](https://github.com/LeChiffreVol2/aureon/blob/main/packaging/SUPPORT.md)
 
-The local main package is `e09e710c...`; the published GitHub alpha
-`a11b67e8...` is unchanged. PyPI and hosted access remain closed. No weights
+The current local and GitHub package is Best `e09e710c...`. Original alpha
+`a11b67e8...` is preserved under historical release filenames. PyPI and hosted access remain closed. No weights
 or imagery ship in the library. Generation uses its pinned Linux/Python 3.12
 environment; other model routes keep their declared dependency profiles.
 

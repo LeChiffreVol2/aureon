@@ -17,6 +17,19 @@ Verify this identity before installation. The current [GitHub release](https://g
 provides these exact Best bytes. Original alpha assets remain under historical
 names; the Git tag and automatic source snapshots retain their original identity.
 
+## Guided setup
+
+From a current public source checkout, one command creates an isolated installation,
+checks exact payloads and exercises CPU preprocessing:
+
+```sh
+python3.12 tools/install.py --execute --prefix "$HOME/aureon-env"
+```
+
+Use `--plan` first for a read-only preview. See [first-use instructions](../docs/FIRST-USE.md)
+for offline archives, logs and feedback. Weights and real inference remain explicit.
+The tool is a source companion; it is not added to the frozen wheel or source archive.
+
 ## Install the reviewed archive
 
 Use a fresh Linux x86_64 / WSL2 Python 3.12 environment. For normal dependency

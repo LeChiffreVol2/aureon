@@ -20,6 +20,11 @@ jobs:
         run: |
           python3.12 -I -B tools/check_selected_engine.py --report "$RUNNER_TEMP/aureon-selected-identity.json"
           python3.12 -I -B tools/test_selected_engine.py
+      - name: Distribution, claims and installer failure handling (offline)
+        run: |
+          python3.12 -I -B tools/check_distribution.py
+          python3.12 -I -B tools/test_distribution.py
+          python3.12 -I -B tools/install.py --plan
       - name: Reusable-library boundary (no private tools or model calls)
         run: python3.12 -I -B packaging/check_library_scope.py --output "$RUNNER_TEMP/library-scope.json"
       - name: Engine layers and compatibility imports
