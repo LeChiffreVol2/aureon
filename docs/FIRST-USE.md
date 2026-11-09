@@ -5,17 +5,17 @@ Start with [installation](../packaging/CANDIDATE-QUICKSTART.md), then
 creates a fresh environment, verifies the released wheel and runs a CPU
 preparation example. It never downloads weights or starts a model job.
 
-## Try the onboarding improvements
+## Install from the public repository
 
-The installer and updated guides are available on the review branch. Clone the
+The installer and updated guides are available on `main`. Clone the
 public repository into a new directory; no private repository access is needed:
 
 ```sh
-git clone --branch feature/developer-onboarding --single-branch https://github.com/LeChiffreVol2/aureon.git aureon-review
-cd aureon-review
+git clone --branch main --single-branch https://github.com/LeChiffreVol2/aureon.git aureon
+cd aureon
 ```
 
-This uses the existing released v0.1.0 Engine. The review branch supplies the
+This uses the existing released v0.1.0 Engine. The source checkout supplies the
 installer and guides; it does not replace the release. Use Linux x86_64 / WSL2
 with Python 3.12 for the installation below. Choose a new environment path.
 
