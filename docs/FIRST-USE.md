@@ -5,6 +5,20 @@ Start with [installation](../packaging/CANDIDATE-QUICKSTART.md), then
 creates a fresh environment, verifies the released wheel and runs a CPU
 preparation example. It never downloads weights or starts a model job.
 
+## Try the onboarding improvements
+
+The installer and updated guides are available on the review branch. Clone the
+public repository into a new directory; no private repository access is needed:
+
+```sh
+git clone --branch feature/developer-onboarding --single-branch https://github.com/LeChiffreVol2/aureon.git aureon-review
+cd aureon-review
+```
+
+This uses the existing released v0.1.0 Engine. The review branch supplies the
+installer and guides; it does not replace the release. Use Linux x86_64 / WSL2
+with Python 3.12 for the installation below. Choose a new environment path.
+
 ```sh
 python3.12 tools/install.py --plan
 python3.12 tools/install.py --execute --prefix "$HOME/aureon-env"
@@ -18,6 +32,10 @@ Pinned third-party dependencies can require source builds; AUREON's released
 wheel is installed unchanged. Logs and `install-result.json` remain in the
 prefix on failure. Choose a fresh prefix after correcting the cause. No existing
 environment is upgraded or removed.
+
+On success, `install-result.json` reports `passed: true`. The CPU walkthrough
+reports `pixels_and_grid_verified: true`. Record `git rev-parse HEAD` with any
+feedback so maintainers can reproduce the guide and installer version used.
 
 For an offline install add `--wheel /absolute/aureon_inference-0.1.0-py3-none-any.whl`
 and `--wheelhouse /absolute/archives`; that directory must contain all archives
